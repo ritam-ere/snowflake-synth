@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Snowflake Synth — debug</title>
+    <link rel="stylesheet" href="./debug.css" />
+    <script type="module" src="./debug.js"></script>
+  </head>
+
+  <body class="Debug">
+    <h1 class="text-button">Debug: звук без интерфейса</h1>
+    <p class="text-label note">
+      Служебная страница для проверки звукового движка. Простые контролы здесь
+      временные — настоящий интерфейс собирается в вехах M2–M5.
+    </p>
+
+    <div class="transport">
+      <button class="play text-button" id="play">Play</button>
+      <span class="text-label status" id="status">Остановлено</span>
+      <span class="text-button position" id="position">1:1</span>
+    </div>
+
+    <div class="meter"><div class="meter-fill" id="meter"></div></div>
+
+    <div class="voices" id="voices"></div>
+  </body>
+</html>
