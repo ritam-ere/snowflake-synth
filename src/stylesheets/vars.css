@@ -52,6 +52,8 @@
   --gap-music: 8px;
   --panel-open-width: 324px;
   --panel-closed-width: 80px;
+  --panel-duration: 280ms; /* сворачивание панели снежинки */
+  --panel-easing: cubic-bezier(0.3, 0, 0.2, 1);
   --voice-height: 160px;
   --voice-padding-top: 36px; /* в макете 40 — поднято на 4 по просьбе автора */
   --voice-padding-bottom: 52px; /* в макете 48 */
