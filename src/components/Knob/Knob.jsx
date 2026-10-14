@@ -5,6 +5,9 @@ import { clamp, formatValue, fromNormal, toNormal } from '../../core/scale.js'
 // Кноб (Knob Full из кита, 70 × 81). Контролируемый: значение приходит
 // в value, изменения уходят через handleChange(property, value).
 //
+// center — подпись в центре диска (строка или функция от значения);
+// detent — магнит у середины хода (для панорамы).
+//
 // Управление:
 //   тянуть вверх / вниз — больше / меньше, весь ход ≈ 200 px,
 //   с Shift — точнее (×0.25);
@@ -17,6 +20,7 @@ const FINE = 0.25
 const STEP = 0.01
 const BIG_STEP = 0.1
 const LABEL_HOLD_MS = 900
+const DETENT = 0.02
 
 // Геометрия снята из макета (экспорт SVG узлов Knob Full 72:4801/72:4802).
 // Координаты SVG — как в экспорте: рисунок выходит за коробку 70 × 66
@@ -68,6 +72,8 @@ export default function Knob({
   defaultValue = min,
   scale = 'linear',
   unit,
+  center,
+  detent = false,
   handleChange
 }) {
   const range = { min, max, scale }
@@ -94,7 +100,9 @@ export default function Knob({
   }
 
   function setNormal(next) {
-    const n = clamp(next)
+    let n = clamp(next)
+    // Магнит у середины (Channel): легко попасть ровно в центр
+    if (detent && Math.abs(n - 0.5) < DETENT) n = 0.5
     handleChange(property, fromNormal(n, range))
     flashValue()
     return n
@@ -237,6 +245,19 @@ export default function Knob({
             strokeWidth={POINTER_STROKE}
             transform={`rotate(${angle} ${CX} ${CY})`}
           />
+
+          {/* Подпись в центре диска не вращается (у Channel — L / M / R) */}
+          {center && (
+            <text
+              className="Knob-center text-small"
+              x={CX}
+              y={DISK_CY}
+              textAnchor="middle"
+              dominantBaseline="central"
+            >
+              {typeof center === 'function' ? center(value) : center}
+            </text>
+          )}
         </svg>
       </div>
 
