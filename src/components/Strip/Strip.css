@@ -41,17 +41,14 @@
   fill: var(--white-60);
 }
 
-.Strip-pointer {
-  fill: var(--white-100);
-}
-
 /* Линия указателя — цвет обводки бегунка (карточка ноды или голос) */
 .Strip-line {
   fill: var(--strip-outline, #1e1e1e);
 }
 
+/* Бегунок белый; обводка цвета фона под полоской отделяет его */
 .Strip-pointer {
-  /* Обводка цвета фона под полоской отделяет бегунок */
+  fill: var(--white-100);
   stroke: var(--strip-outline, #1e1e1e);
 }
 
