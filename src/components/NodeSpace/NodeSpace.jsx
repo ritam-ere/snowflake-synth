@@ -8,7 +8,7 @@ import Fx from '../Fx/Fx.jsx'
 // Поле нод: колонки из состояния ядра (4 при раскрытой панели, 5 при
 // свёрнутой). Карточка Add Effect — в конце колонки, куда ляжет
 // следующая нода. Кнопки Edit и Export внизу справа пока неактивны
-export default function NodeSpace({ state }) {
+export default function NodeSpace({ state, handleChange }) {
   const { columns } = state.layout
   const addColumn = nextColumnIndex(state)
 
@@ -18,7 +18,12 @@ export default function NodeSpace({ state }) {
         {columns.map((column, i) => (
           <div className="NodeSpace-column" key={i}>
             {column.map((nodeId) => (
-              <Fx key={nodeId} state={state} nodeId={nodeId} />
+              <Fx
+                key={nodeId}
+                state={state}
+                nodeId={nodeId}
+                handleChange={handleChange}
+              />
             ))}
             {i === addColumn && <AddFx disabled={!canAddNodes(state)} />}
           </div>

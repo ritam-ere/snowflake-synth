@@ -3,11 +3,11 @@ import React from 'react'
 import { EFFECTS } from '../../core/effects.js'
 import { voicesOfNode } from '../../core/state.js'
 import Dot from '../Dot/Dot.jsx'
+import FxControls from './FxControls.jsx'
 
 // Нода эффекта (Fx из кита): карточка высотой из кита, бейдж с названием
-// сверху и «лампочки» подключённых голосов слева. Контролы внутри —
-// задача 3.3
-export default function Fx({ state, nodeId, children }) {
+// сверху, «лампочки» подключённых голосов слева и контролы по киту
+export default function Fx({ state, nodeId, handleChange }) {
   const node = state.nodes[nodeId]
   const spec = EFFECTS[node.type]
   const voices = voicesOfNode(state, nodeId)
@@ -28,7 +28,7 @@ export default function Fx({ state, nodeId, children }) {
         </span>
       )}
 
-      {children}
+      <FxControls node={node} handleChange={handleChange} />
     </article>
   )
 }
