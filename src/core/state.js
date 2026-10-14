@@ -286,16 +286,21 @@ function deleteNodes(state, nodeIds) {
   }
 }
 
+// Delete в режиме Edit: удалить выбранные ноды и выйти из режима
+function deleteSelected(state) {
+  if (state.ui.selected.length === 0) return state
+  return setEditing(deleteNodes(state, state.ui.selected), false)
+}
+
 // Reset All: на поле не остаётся ни одного эффекта — чистый звук.
 // Голоса и их настройки не меняются; новые ноды снова ложатся
-// с первой колонки
+// с первой колонки. Режим Edit после сброса выключается
 function resetNodes(state) {
   const cleared = deleteNodes(state, Object.keys(state.nodes))
-  return {
-    ...cleared,
-    layout: { ...cleared.layout, cursor: 0 },
-    ui: { ...cleared.ui, selected: [] }
-  }
+  return setEditing(
+    { ...cleared, layout: { ...cleared.layout, cursor: 0 } },
+    false
+  )
 }
 
 // Контракт контролов из synth-controls: handleChange(property, value),
@@ -343,7 +348,7 @@ export function reducer(state, action) {
     case 'DELETE_NODES':
       return deleteNodes(state, action.nodeIds)
     case 'DELETE_SELECTED':
-      return deleteNodes(state, state.ui.selected)
+      return deleteSelected(state)
     case 'RESET_NODES':
       return resetNodes(state)
     default:

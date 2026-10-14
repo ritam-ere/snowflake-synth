@@ -564,7 +564,7 @@ describe('режим редактирования', () => {
     expect(s.ui.selected).toEqual(['n3'])
   })
 
-  test('Delete удаляет выбранные ноды вместе со связями и местами в колонках', () => {
+  test('Delete удаляет выбранные ноды со связями и выходит из режима Edit', () => {
     const s = run(
       createInitialState(),
       { type: 'SET_EDITING', on: true },
@@ -576,7 +576,8 @@ describe('режим редактирования', () => {
     expect(s.links.some((l) => l.node === 'n1' || l.node === 'n3')).toBe(false)
     expect(s.layout.columns.flat()).toEqual(['n2', 'n4'])
     expect(s.ui.selected).toEqual([])
-    expect(s.ui.editing).toBe(true)
+    // после Delete режим Edit выключается сам
+    expect(s.ui.editing).toBe(false)
   })
 
   test('Delete без выбора ничего не меняет', () => {
@@ -584,13 +585,18 @@ describe('режим редактирования', () => {
     expect(reducer(s, { type: 'DELETE_SELECTED' })).toBe(s)
   })
 
-  test('Reset All: ни одного эффекта, голоса не тронуты, новые ноды — с первой колонки', () => {
+  test('Reset All: ни одного эффекта, голоса не тронуты, режим Edit выключен', () => {
     const init = run(createInitialState(), {
       type: 'CHANGE',
       property: ['voices', 'lead', 'volume'],
       value: 40
     })
-    let s = reducer(init, { type: 'RESET_NODES' })
+    let s = run(
+      init,
+      { type: 'SET_EDITING', on: true },
+      { type: 'RESET_NODES' }
+    )
+    expect(s.ui.editing).toBe(false)
     expect(nodeCount(s)).toBe(0)
     expect(s.links).toEqual([])
     expect(s.layout.columns.flat()).toEqual([])
