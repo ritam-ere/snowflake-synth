@@ -14,6 +14,12 @@ import Strip from '../Strip/Strip.jsx'
 //   Open       — клик по верху: Channel, Instrument, Volume.
 // Открыта может быть только одна плашка; Esc закрывает (см. App).
 
+// Буква в центре кноба Channel: L — левее, M — середина, R — правее
+function panLetter(pan) {
+  if (Math.abs(pan) < 0.005) return 'M'
+  return pan < 0 ? 'L' : 'R'
+}
+
 export default function VoiceTab({
   id,
   settings,
@@ -48,8 +54,10 @@ export default function VoiceTab({
             value={settings.pan}
             min={-1}
             max={1}
-            defaultValue={VOICES[id].defaults.pan}
+            defaultValue={0}
             unit="pan"
+            center={panLetter}
+            detent
             handleChange={handleChange}
           />
           <div className="VoiceTab-column">

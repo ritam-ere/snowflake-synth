@@ -55,3 +55,11 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+.Knob-center {
+  fill: var(--white-100);
+  font-family: var(--font-family);
+  font-size: var(--text-small-size);
+  letter-spacing: var(--text-small-tracking);
+  pointer-events: none;
+}
