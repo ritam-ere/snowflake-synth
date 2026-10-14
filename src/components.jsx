@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import Knob from './components/Knob/Knob.jsx'
+import Steps from './components/Steps/Steps.jsx'
+import StepsPair from './components/Steps/StepsPair.jsx'
 import { EFFECTS, EFFECT_TYPES, defaultSettings } from './core/effects.js'
 
 // Витрина контролов: каждый контрол как в ките и с текущим значением.
@@ -112,6 +114,71 @@ function Showcase() {
               </span>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-button">Steps</h2>
+        <p className="text-label hint">
+          Выбор одного варианта: клик или стрелки. Неактивные варианты — текст
+          белый 60%.
+        </p>
+
+        <div className="row">
+          <div className="card">
+            <span className="text-small card-title">P SHIFT</span>
+            <Steps
+              name="Interval"
+              property={['pitchShift', 'interval']}
+              value={values.pitchShift.interval}
+              options={EFFECTS.pitchShift.params.interval.options}
+              labels={EFFECTS.pitchShift.params.interval.labels}
+              handleChange={handleChange}
+            />
+            <span className="text-small value">
+              interval {values.pitchShift.interval}
+            </span>
+          </div>
+
+          <div className="card">
+            <span className="text-small card-title">CHORUS</span>
+            <Steps
+              name="Wave"
+              property={['chorus', 'wave']}
+              value={values.chorus.wave}
+              options={EFFECTS.chorus.params.wave.options}
+              handleChange={handleChange}
+            />
+            <span className="text-small value">wave {values.chorus.wave}</span>
+          </div>
+
+          <div className="card">
+            <span className="text-small card-title">DELAY</span>
+            <StepsPair
+              name="Time"
+              left={{ property: ['delay', 'timeL'], value: values.delay.timeL }}
+              right={{
+                property: ['delay', 'timeR'],
+                value: values.delay.timeR
+              }}
+              options={EFFECTS.delay.params.timeL.options}
+              labels={EFFECTS.delay.params.timeL.labels}
+              handleChange={handleChange}
+            />
+            <Steps
+              name="PingPong"
+              orientation="horizontal"
+              property={['delay', 'pingPong']}
+              value={values.delay.pingPong}
+              options={[true, false]}
+              labels={EFFECTS.delay.params.pingPong.labels}
+              handleChange={handleChange}
+            />
+            <span className="text-small value">
+              timeL {values.delay.timeL} · timeR {values.delay.timeR} · pingPong{' '}
+              {String(values.delay.pingPong)}
+            </span>
+          </div>
         </div>
       </section>
     </main>

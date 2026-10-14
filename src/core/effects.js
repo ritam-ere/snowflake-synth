@@ -6,11 +6,16 @@
 //   options — выбор одного значения из списка
 //   toggle  — да / нет
 //
+// labels — подписи вариантов в интерфейсе (options и toggle)
 // unit  — единицы для подписи (см. core/scale.js)
 // scale — 'log' для частот: ход контрола по логарифмической шкале
 
 // Mix есть у каждой ноды: сколько эффекта подмешивается к голосу
 const mix = { kind: 'range', min: 0, max: 1, default: 0.4, unit: '%' }
+
+// Подписи вариантов в интерфейсе
+const TIME_LABELS = { '8n': '1/8', '4n': '1/4', '2n': '1/2' }
+const YES_NO = { true: 'yes', false: 'no' }
 
 // Зоны снежинки: середина (отверстия), край (силуэт), сгибы (выемки)
 export const ZONES = ['center', 'edge', 'folds']
@@ -39,9 +44,19 @@ export const EFFECTS = {
         unit: '%'
       },
       mix,
-      timeL: { kind: 'options', options: ['8n', '4n', '2n'], default: '4n' },
-      timeR: { kind: 'options', options: ['8n', '4n', '2n'], default: '8n' },
-      pingPong: { kind: 'toggle', default: true }
+      timeL: {
+        kind: 'options',
+        options: ['8n', '4n', '2n'],
+        labels: TIME_LABELS,
+        default: '4n'
+      },
+      timeR: {
+        kind: 'options',
+        options: ['8n', '4n', '2n'],
+        labels: TIME_LABELS,
+        default: '8n'
+      },
+      pingPong: { kind: 'toggle', default: true, labels: YES_NO }
     }
   },
 
@@ -130,6 +145,7 @@ export const EFFECTS = {
       interval: {
         kind: 'options',
         options: [-12, 7, 12],
+        labels: { [-12]: '-12', 7: '+7', 12: '+12' },
         default: 12,
         unit: 'st'
       },
