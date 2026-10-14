@@ -8,7 +8,6 @@
 @import 'components/Dropdown/Dropdown.css';
 @import 'components/Icon/Icon.css';
 @import 'components/Knob/Knob.css';
-@import 'components/Snowflake/Snowflake.css';
 @import 'components/Steps/Steps.css';
 @import 'components/Strip/Strip.css';
 
@@ -135,22 +134,4 @@
 .Showcase .card-plain {
   background: none;
   border: var(--border);
-}
-
-/* Сравнение стилей снежинки */
-.Showcase .presets {
-  margin-bottom: 16px;
-}
-
-.Showcase .styles-card {
-  align-items: center;
-}
-
-.Showcase .styles-card .Snowflake {
-  width: auto;
-  height: 460px;
-}
-
-.Showcase .styles-card a {
-  color: var(--white-60);
 }

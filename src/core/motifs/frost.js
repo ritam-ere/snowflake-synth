@@ -1,11 +1,10 @@
-// Стиль «Иней» (задача 6.3): ледяные веточки под 60°, шестиугольники,
-// иголки и грани — как у настоящего кристалла снега. Таблица
-// «параметр → узор» та же, что у «Геометрии». Каждая бумажная линия
-// доходит до границы своей области.
+// Стиль «Иней» (задача 6.3, выбран): ледяные веточки под 60°, иголки
+// и грани — как у настоящего кристалла снега. Узоры из прошлой
+// итерации (geometry.js) тоже в ходу: Delay — лесенка уголков оттуда.
+// Каждая бумажная линия доходит до границы своей области.
 
-import { EDGE_DEPTH, L, centerLimit, foldPoint } from '../snowflake.js'
+import { EDGE_DEPTH, L, foldPoint } from '../snowflake.js'
 import {
-  TIME_RISE,
   WAVES,
   across,
   foldHole,
@@ -16,6 +15,7 @@ import {
   paper,
   stem
 } from './common.js'
+import { geometry } from './geometry.js'
 
 const RAD60 = Math.PI / 3
 
@@ -53,39 +53,6 @@ function reverb(cut) {
     const barbs = len > 26 ? 1 : 0
     shapes.push(...needle([x, y], RAD60, len, w * 0.85, barbs))
     shapes.push(...needle([x, y], -RAD60, len, w * 0.85, barbs))
-  }
-  return shapes
-}
-
-// Delay: вложенные шестиугольники-эхо на стержне. Feedback — число
-// контуров; Time L / R — ширина левой / правой половины; Ping-Pong —
-// контуры через один повёрнуты на 30°
-function delay(cut) {
-  const { region } = cut
-  const { timeL, timeR, pingPong } = cut.settings
-  const count = 1 + Math.round(norm(cut, 'feedback') * 5)
-  const w = lace(cut)
-  const ym = (region.y0 + region.y1) / 2
-  const { x, half } = across(region, ym)
-  const R = Math.min(half - 2, (region.y1 - region.y0) / 2 - 2)
-  const stretch = {
-    left: TIME_RISE[timeL] / 0.6,
-    right: TIME_RISE[timeR] / 0.6
-  }
-  const shapes = [hole(region.polygon), paper(stem(region), w)]
-
-  for (let i = 0; i < count; i++) {
-    const r = R * (1 - i / (count + 0.6))
-    const turn = pingPong && i % 2 ? Math.PI / 6 : 0
-    const points = Array.from({ length: 7 }, (_, k) => {
-      const a = turn + k * RAD60
-      const dx = Math.sin(a) * r
-      const k2 = dx > 0 ? stretch.left : stretch.right
-      return [x + dx * Math.min(k2, (half - 2) / r), ym + Math.cos(a) * r]
-    })
-    shapes.push(
-      paper(points, Math.max(2.5, w * (1 - 0.08 * i)), { join: 'miter' })
-    )
   }
   return shapes
 }
@@ -270,7 +237,7 @@ function vibrato(cut) {
 
 export const frost = {
   reverb,
-  delay,
+  delay: geometry.delay,
   pitchShift,
   chorus,
   distortion,

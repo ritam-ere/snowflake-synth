@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { DEFAULT_STYLE, motif } from '../../core/motifs/index.js'
+import { motif } from '../../core/motifs/index.js'
 import {
   ANGLE,
   COS,
@@ -13,7 +13,6 @@ import {
 // Сложенный клин снежинки в панели (задача 6.1), форма — из макета. Геометрия и узор —
 // чистые функции из core/snowflake.js; здесь только рисование.
 // Вырезы — ажурные мотивы эффектов по таблице раздела 9 (core/motifs/),
-// в одном из стилей (style),
 // каждый обрезан по своей области зоны.
 //
 // Координаты клина: x — от хребта влево, y — от вершины вверх.
@@ -79,7 +78,7 @@ function Shape({ item }) {
 }
 
 // Вырез одной ноды: мотив эффекта, обрезанный по своей области
-function Cut({ cut, style, clipId }) {
+function Cut({ cut, clipId }) {
   const points = cut.region.polygon.map(([x, y]) => `${x},${y}`).join(' ')
   return (
     <>
@@ -87,7 +86,7 @@ function Cut({ cut, style, clipId }) {
         <polygon points={points} />
       </clipPath>
       <g clipPath={`url(#${clipId})`}>
-        {motif(cut, style).map((item, i) => (
+        {motif(cut).map((item, i) => (
           <Shape key={i} item={item} />
         ))}
       </g>
@@ -97,7 +96,7 @@ function Cut({ cut, style, clipId }) {
 
 let maskCounter = 0
 
-export default function Snowflake({ state, style = DEFAULT_STYLE }) {
+export default function Snowflake({ state }) {
   const cuts = snowflakePattern(state)
   const mask = React.useRef(`snowflake-cuts-${maskCounter++}`)
 
@@ -118,7 +117,6 @@ export default function Snowflake({ state, style = DEFAULT_STYLE }) {
               <Cut
                 key={cut.nodeId}
                 cut={cut}
-                style={style}
                 clipId={`${mask.current}-${cut.nodeId}`}
               />
             ))}
