@@ -37,6 +37,12 @@ bun run format   # форматирование Prettier
 
 Служебная страница с токенами и типографикой: http://localhost:3000/tokens
 
+## Материалы и авторы
+
+- **Мелодия** — три MIDI-дорожки автора проекта, записаны в BandLab: `src/data/midi/`.
+- **Сэмплы инструментов** — Fluid Soundfont из [midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts), лицензия [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/us/): `src/assets/samples/` (подробности в `ATTRIBUTION.md`).
+- **Шрифт** — ABC Maxi Round Plus, Dinamo Typefaces (trial, учебное соглашение).
+
 ## Структура
 
 ```
