@@ -10,7 +10,6 @@
     "format": "prettier --write \"src/**/*.{js,jsx,css,html}\" \"*.{js,json,md}\""
   },
   "dependencies": {
-    "@tonejs/midi": "^2.0.28",
     "classnames": "^2.5.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

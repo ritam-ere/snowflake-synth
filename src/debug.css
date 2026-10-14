@@ -1,0 +1,93 @@
+@import 'stylesheets/vars.css';
+@import 'stylesheets/reset.css';
+@import 'stylesheets/fonts.css';
+@import 'stylesheets/basics.css';
+
+.Debug {
+  height: auto;
+  min-height: 100%;
+  padding: 40px;
+}
+
+.Debug .note {
+  max-width: 640px;
+  margin: 16px 0 40px;
+  line-height: 1.4;
+  color: var(--white-60);
+}
+
+.Debug .transport {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.Debug .play {
+  min-width: 120px;
+  padding: 12px 20px;
+  background: var(--white-4);
+  border: var(--border);
+  border-radius: var(--radius-card);
+  color: var(--white-60);
+}
+
+.Debug .play:hover {
+  color: var(--white-100);
+}
+
+.Debug .play:disabled {
+  color: var(--white-20);
+  cursor: default;
+}
+
+.Debug .status {
+  color: var(--white-60);
+}
+
+.Debug .position {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.Debug .meter {
+  height: 8px;
+  margin-bottom: 40px;
+  background: var(--white-4);
+  border-radius: var(--radius-small);
+  overflow: hidden;
+}
+
+.Debug .meter-fill {
+  width: 0;
+  height: 100%;
+  background: var(--white-60);
+  transition: width 60ms linear;
+}
+
+.Debug .voices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.Debug .voice {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border: var(--border);
+  border-radius: var(--radius-card);
+}
+
+.Debug .voice-lead {
+  background: var(--voice-lead);
+}
+
+.Debug .voice-bass {
+  background: var(--voice-bass);
+}
+
+.Debug .voice-extra {
+  background: var(--voice-extra);
+}
