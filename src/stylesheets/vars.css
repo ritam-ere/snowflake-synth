@@ -58,6 +58,7 @@
   --voice-padding-top: 36px; /* в макете 40 — поднято на 4 по просьбе автора */
   --voice-padding-bottom: 52px; /* в макете 48 */
   --voice-bottom-zone: 32px;
+  --voice-duration: 160ms; /* переходы состояний плашки голоса */
   --button-size: 54px;
   --icon-size: 28px;
   --dot-size: 10px;

@@ -1,40 +1,136 @@
 .VoiceTab {
   position: relative;
-  display: flex;
   flex: 1 1 0;
-  align-items: flex-start;
-  justify-content: center;
   min-width: 0;
   height: var(--voice-height);
-  padding: var(--voice-padding-top) 20px var(--voice-padding-bottom);
   background: var(--voice-color);
   border: var(--border);
   border-radius: var(--radius-card);
+  /* Обводка поинтеров кнобов и полосок — цвет голоса */
+  --knob-outline: var(--voice-color);
+  --strip-outline: var(--voice-color);
 }
 
 .VoiceTab-lead {
   --voice-color: var(--voice-lead);
+  --voice-dark: var(--voice-lead-dark);
 }
 
 .VoiceTab-bass {
   --voice-color: var(--voice-bass);
+  --voice-dark: var(--voice-bass-dark);
 }
 
 .VoiceTab-extra {
   --voice-color: var(--voice-extra);
+  --voice-dark: var(--voice-extra-dark);
+}
+
+/* ---------- Верхняя зона ---------- */
+
+.VoiceTab-upper {
+  position: absolute;
+  inset: 0 0 var(--voice-bottom-zone) 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--voice-padding-top) 20px 0;
+  color: var(--white-100);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  cursor: pointer;
+  outline: none;
+  transition: background-color var(--voice-duration) linear;
+}
+
+.VoiceTab:not(.is-open) .VoiceTab-upper:hover {
+  background: var(--voice-dark);
+}
+
+.VoiceTab-upper:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--white-60);
 }
 
 .VoiceTab-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: opacity var(--voice-duration) linear;
 }
 
-/* Точка сидит на нижнем крае плашки */
+/* ---------- Open: Channel слева, Instrument и Volume справа ---------- */
+
+.VoiceTab.is-open .VoiceTab-upper {
+  cursor: default;
+}
+
+.VoiceTab.is-open .VoiceTab-name {
+  opacity: 0;
+}
+
+.VoiceTab-controls {
+  position: absolute;
+  top: 21px;
+  left: 50%;
+  display: flex;
+  gap: 25px;
+  width: 251px;
+  transform: translateX(-50%);
+  animation: voice-open var(--voice-duration) linear;
+}
+
+/* Channel в ките на 3px ниже Instrument */
+.VoiceTab-controls .Knob {
+  margin-top: 3px;
+}
+
+.VoiceTab-column {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+
+@keyframes voice-open {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- Нижняя зона 32px ---------- */
+
+.VoiceTab-bottom {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: var(--voice-bottom-zone);
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  transition: background-color var(--voice-duration) linear;
+}
+
+.VoiceTab-bottom:hover {
+  background: var(--voice-dark);
+}
+
+/* Точка сидит на нижнем крае; при наведении на низ — «+» 32px */
 .VoiceTab-dot {
   position: absolute;
   bottom: -9px;
   left: 50%;
   display: flex;
   transform: translateX(-50%);
+}
+
+.VoiceTab-dot-add {
+  display: none;
+  margin-bottom: -11px;
+}
+
+.VoiceTab-dot-add .Dot {
+  --dot-color: var(--voice-dark);
+}
+
+.VoiceTab-bottom:hover .VoiceTab-dot-default {
+  display: none;
+}
+
+.VoiceTab-bottom:hover .VoiceTab-dot-add {
+  display: flex;
 }

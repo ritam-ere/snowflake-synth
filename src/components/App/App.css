@@ -18,6 +18,9 @@
 }
 
 .App-voices {
+  /* Точки голосов выступают вниз и должны лежать поверх поля нод */
+  position: relative;
+  z-index: 2;
   display: flex;
   flex: none;
   gap: var(--gap-music);
