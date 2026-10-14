@@ -53,6 +53,8 @@
   --panel-open-width: 324px;
   --panel-closed-width: 80px;
   --voice-height: 160px;
+  --voice-padding-top: 40px;
+  --voice-padding-bottom: 48px;
   --voice-bottom-zone: 32px;
   --button-size: 54px;
   --icon-size: 28px;

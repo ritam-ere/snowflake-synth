@@ -33,12 +33,14 @@
   color: var(--white-60);
 }
 
+/* Отступы как в макете: 40 сверху, 48 снизу — название чуть выше центра */
 .Tokens .voice {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: 300px;
   height: var(--voice-height);
+  padding: var(--voice-padding-top) 20px var(--voice-padding-bottom);
   border: var(--border);
   border-radius: var(--radius-card);
 }
