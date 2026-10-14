@@ -3,8 +3,14 @@
 // так же будет работать настоящий интерфейс.
 
 import { createEngine } from './audio/engine.js'
-import { EFFECTS, EFFECT_TYPES, defaultSettings } from './core/effects.js'
-import { createInitialState, reducer } from './core/state.js'
+import { EFFECTS, EFFECT_TYPES } from './core/effects.js'
+import {
+  canAddNodes,
+  createInitialState,
+  isLinked,
+  nodeCount,
+  reducer
+} from './core/state.js'
 import { INSTRUMENT_LABELS, VOICE_IDS, VOICES } from './core/voices.js'
 
 let state = createInitialState()
@@ -17,7 +23,7 @@ window.snowflake = {
     return state
   },
   change,
-  bench
+  dispatch
 }
 
 const STATUS_TEXT = {
@@ -26,10 +32,22 @@ const STATUS_TEXT = {
   error: 'ошибка загрузки, играет прежний'
 }
 
-function change(property, value) {
-  state = reducer(state, { type: 'CHANGE', property, value })
+// Любое действие: новое состояние ядра → движок пересобирает звук
+function dispatch(action) {
+  const prev = state
+  state = reducer(state, action)
+  if (state === prev) return
+
   engine.update(state)
   renderLabels()
+  if (prev.nodes !== state.nodes && nodeCount(prev) !== nodeCount(state)) {
+    renderEffects()
+  }
+  renderLinks()
+}
+
+function change(property, value) {
+  dispatch({ type: 'CHANGE', property, value })
 }
 
 function panLabel(pan) {
@@ -98,18 +116,9 @@ function renderLabels() {
   })
 }
 
-// ---------- Эффекты ----------
-// Временный стенд: свои настройки эффектов, без нод ядра.
-// Связь с состоянием ядра появится в задаче 1.5
+// ---------- Эффекты (ноды из состояния ядра) ----------
 
 const VOICE_SHORT = { lead: 'L', bass: 'B', extra: 'E' }
-
-const bench = Object.fromEntries(
-  EFFECT_TYPES.map((type) => [
-    type,
-    { settings: defaultSettings(type), voices: new Set() }
-  ])
-)
 
 function formatParam(param, value) {
   if (param.kind === 'toggle') return value ? 'yes' : 'no'
@@ -119,8 +128,8 @@ function formatParam(param, value) {
   return value.toFixed(1)
 }
 
-function paramControl(type, name, param, value) {
-  const data = `data-effect="${type}" data-param="${name}"`
+function paramControl(nodeId, name, param, value) {
+  const data = `data-node="${nodeId}" data-param="${name}"`
 
   if (param.kind === 'range') {
     const step = (param.max - param.min) / 100
@@ -144,73 +153,101 @@ function paramControl(type, name, param, value) {
 function renderEffects() {
   const container = document.getElementById('effects')
 
-  container.innerHTML = EFFECT_TYPES.map((type) => {
-    const { settings } = bench[type]
-    const params = Object.entries(EFFECTS[type].params)
-      .map(
-        ([name, param]) => `
+  container.innerHTML = Object.values(state.nodes)
+    .map((node) => {
+      const spec = EFFECTS[node.type]
+      const params = Object.entries(spec.params)
+        .map(
+          ([name, param]) => `
           <label class="control text-small">
-            <span>${name} <span data-value="${type}-${name}">${formatParam(
+            <span>${name} <span data-value="${node.id}-${name}">${formatParam(
               param,
-              settings[name]
+              node.settings[name]
             )}</span></span>
-            ${paramControl(type, name, param, settings[name])}
+            ${paramControl(node.id, name, param, node.settings[name])}
           </label>`
-      )
-      .join('')
+        )
+        .join('')
 
-    const toggles = VOICE_IDS.map(
-      (id) =>
-        `<button class="link link-${id} text-small" data-link="${type}"
+      const toggles = VOICE_IDS.map(
+        (id) =>
+          `<button class="link link-${id} text-small" data-link="${node.id}"
           data-voice="${id}">${VOICE_SHORT[id]}</button>`
-    ).join('')
+      ).join('')
 
-    return `
+      return `
       <div class="effect">
         <div class="effect-head">
-          <span class="text-button">${EFFECTS[type].label}</span>
+          <span class="text-button">${spec.label}
+            <span class="node-id text-small">${node.id}</span></span>
           <span class="links">${toggles}</span>
         </div>
         ${params}
       </div>
     `
-  }).join('')
+    })
+    .join('')
+
+  renderAddButtons()
+  renderLinks()
 }
 
-function toggleLink(type, voiceId, button) {
-  const { settings, voices } = bench[type]
-  const key = `${type}:${voiceId}`
+function renderAddButtons() {
+  const container = document.getElementById('add')
+  const disabled = canAddNodes(state) ? '' : 'disabled'
 
-  if (voices.has(voiceId)) {
-    voices.delete(voiceId)
-    engine.removeEffect(key)
-    button.classList.remove('on')
-  } else {
-    voices.add(voiceId)
-    engine.addEffect(key, voiceId, type, settings)
-    button.classList.add('on')
+  container.innerHTML =
+    EFFECT_TYPES.map(
+      (type) =>
+        `<button class="add text-small" data-add="${type}" ${disabled}>+ ${EFFECTS[type].label}</button>`
+    ).join('') +
+    `<span class="text-small count">${nodeCount(state)} / 12</span>`
+}
+
+// Подсветка кнопок L B E по связям в состоянии
+function renderLinks() {
+  document.querySelectorAll('[data-link]').forEach((button) => {
+    const on = isLinked(state, button.dataset.voice, button.dataset.link)
+    button.classList.toggle('on', on)
+  })
+  const count = document.getElementById('instances')
+  if (count) {
+    const { instances, taps } = engine.graphInfo()
+    count.textContent = `${instances.length} эффектов, ${taps.length} посылов`
   }
 }
 
 function handleEffectInput(event) {
-  const { effect: type, param: name } = event.target.dataset
-  if (!type) return
+  const { node: nodeId, param: name } = event.target.dataset
+  if (!nodeId) return
 
-  const param = EFFECTS[type].params[name]
+  const param = EFFECTS[state.nodes[nodeId].type].params[name]
   let value
   if (param.kind === 'range') value = Number(event.target.value)
   else if (param.kind === 'options')
     value = param.options[Number(event.target.value)]
   else value = event.target.checked
 
-  const entry = bench[type]
-  entry.settings = { ...entry.settings, [name]: value }
-  entry.voices.forEach((id) =>
-    engine.setEffect(`${type}:${id}`, entry.settings)
-  )
+  change(['nodes', nodeId, 'settings', name], value)
 
-  document.querySelector(`[data-value="${type}-${name}"]`).textContent =
-    formatParam(param, value)
+  document.querySelector(`[data-value="${nodeId}-${name}"]`).textContent =
+    formatParam(param, state.nodes[nodeId].settings[name])
+}
+
+function handleEffectClick(event) {
+  const link = event.target.closest('[data-link]')
+  if (link) {
+    const { link: nodeId, voice } = link.dataset
+    dispatch({
+      type: isLinked(state, voice, nodeId) ? 'UNLINK' : 'LINK',
+      voice,
+      nodeId
+    })
+    return
+  }
+
+  const add = event.target.closest('[data-add]')
+  if (add) dispatch({ type: 'ADD_NODES', types: [add.dataset.add] })
 }
 
 function setStatus(text) {
@@ -238,21 +275,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const voices = document.getElementById('voices')
 
   const effects = document.getElementById('effects')
+  const add = document.getElementById('add')
 
   renderVoices()
   renderEffects()
   voices.addEventListener('input', handleInput)
   effects.addEventListener('input', handleEffectInput)
-  effects.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-link]')
-    if (!button || !engine.effectKeys) return
-    if (!engine.voices.lead) {
-      setStatus('Сначала нажмите Play')
-      return
-    }
-    toggleLink(button.dataset.link, button.dataset.voice, button)
-  })
+  effects.addEventListener('click', handleEffectClick)
+  add.addEventListener('click', handleEffectClick)
   engine.onStatus(renderLabels)
+  setInterval(renderLinks, 500)
 
   button.addEventListener('click', async () => {
     if (engine.isPlaying()) {
