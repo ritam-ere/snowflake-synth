@@ -20,7 +20,12 @@ const optionalFontPlugin = {
 
 // Продакшен-сборка в dist/ для GitHub Pages
 const result = await Bun.build({
-  entrypoints: ['./src/index.html', './src/tokens.html', './src/debug.html'],
+  entrypoints: [
+    './src/index.html',
+    './src/tokens.html',
+    './src/debug.html',
+    './src/components.html'
+  ],
   outdir: './dist',
   minify: true,
   target: 'browser',

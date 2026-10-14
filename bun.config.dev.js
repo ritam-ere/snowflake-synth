@@ -3,6 +3,7 @@ import { join, normalize } from 'node:path'
 import index from './src/index.html'
 import tokens from './src/tokens.html'
 import debug from './src/debug.html'
+import components from './src/components.html'
 
 const SAMPLES_DIR = './src/assets/samples'
 
@@ -32,6 +33,7 @@ const server = Bun.serve({
     '/': index,
     '/tokens': tokens,
     '/debug': debug,
+    '/components': components,
     '/samples/*': serveSample
   }
 })
@@ -39,3 +41,4 @@ const server = Bun.serve({
 console.log(`Snowflake Synth: ${server.url}`)
 console.log(`Токены: ${server.url}tokens`)
 console.log(`Debug: ${server.url}debug`)
+console.log(`Контролы: ${server.url}components`)

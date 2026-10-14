@@ -5,9 +5,12 @@
 //   range   — число в диапазоне [min, max]
 //   options — выбор одного значения из списка
 //   toggle  — да / нет
+//
+// unit  — единицы для подписи (см. core/scale.js)
+// scale — 'log' для частот: ход контрола по логарифмической шкале
 
 // Mix есть у каждой ноды: сколько эффекта подмешивается к голосу
-const mix = { kind: 'range', min: 0, max: 1, default: 0.4 }
+const mix = { kind: 'range', min: 0, max: 1, default: 0.4, unit: '%' }
 
 // Зоны снежинки: середина (отверстия), край (силуэт), сгибы (выемки)
 export const ZONES = ['center', 'edge', 'folds']
@@ -18,7 +21,7 @@ export const EFFECTS = {
     zone: 'center',
     height: 112,
     params: {
-      decay: { kind: 'range', min: 0, max: 1, default: 0.5 },
+      decay: { kind: 'range', min: 0, max: 1, default: 0.5, unit: '%' },
       mix
     }
   },
@@ -28,7 +31,13 @@ export const EFFECTS = {
     zone: 'center',
     height: 269,
     params: {
-      feedback: { kind: 'range', min: 0, max: 0.85, default: 0.35 },
+      feedback: {
+        kind: 'range',
+        min: 0,
+        max: 0.85,
+        default: 0.35,
+        unit: '%'
+      },
       mix,
       timeL: { kind: 'options', options: ['8n', '4n', '2n'], default: '4n' },
       timeR: { kind: 'options', options: ['8n', '4n', '2n'], default: '8n' },
@@ -41,14 +50,21 @@ export const EFFECTS = {
     zone: 'edge',
     height: 206,
     params: {
-      depth: { kind: 'range', min: 0, max: 1, default: 0.5 },
+      depth: { kind: 'range', min: 0, max: 1, default: 0.5, unit: '%' },
       mix,
       wave: {
         kind: 'options',
         options: ['sine', 'triangle', 'square'],
         default: 'sine'
       },
-      rate: { kind: 'range', min: 0.1, max: 4, default: 1.5 }
+      rate: {
+        kind: 'range',
+        min: 0.1,
+        max: 4,
+        default: 1.5,
+        unit: 'Hz',
+        scale: 'log'
+      }
     }
   },
 
@@ -57,9 +73,16 @@ export const EFFECTS = {
     zone: 'edge',
     height: 168,
     params: {
-      drive: { kind: 'range', min: 0, max: 1, default: 0.3 },
+      drive: { kind: 'range', min: 0, max: 1, default: 0.3, unit: '%' },
       mix,
-      tone: { kind: 'range', min: 1000, max: 12000, default: 4000 }
+      tone: {
+        kind: 'range',
+        min: 1000,
+        max: 12000,
+        default: 4000,
+        unit: 'kHz',
+        scale: 'log'
+      }
     }
   },
 
@@ -68,9 +91,16 @@ export const EFFECTS = {
     zone: 'folds',
     height: 168,
     params: {
-      freq: { kind: 'range', min: 0.1, max: 4, default: 0.5 },
+      freq: {
+        kind: 'range',
+        min: 0.1,
+        max: 4,
+        default: 0.5,
+        unit: 'Hz',
+        scale: 'log'
+      },
       mix,
-      oct: { kind: 'range', min: 1, max: 5, default: 3 }
+      oct: { kind: 'range', min: 1, max: 5, default: 3, unit: 'oct' }
     }
   },
 
@@ -79,9 +109,16 @@ export const EFFECTS = {
     zone: 'folds',
     height: 168,
     params: {
-      depth: { kind: 'range', min: 0, max: 1, default: 0.2 },
+      depth: { kind: 'range', min: 0, max: 1, default: 0.2, unit: '%' },
       mix,
-      rate: { kind: 'range', min: 0.5, max: 8, default: 5 }
+      rate: {
+        kind: 'range',
+        min: 0.5,
+        max: 8,
+        default: 5,
+        unit: 'Hz',
+        scale: 'log'
+      }
     }
   },
 
@@ -90,7 +127,12 @@ export const EFFECTS = {
     zone: 'center',
     height: 112,
     params: {
-      interval: { kind: 'options', options: [-12, 7, 12], default: 12 },
+      interval: {
+        kind: 'options',
+        options: [-12, 7, 12],
+        default: 12,
+        unit: 'st'
+      },
       mix
     }
   }
