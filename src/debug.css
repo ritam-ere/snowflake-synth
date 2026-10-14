@@ -91,3 +91,27 @@
 .Debug .voice-extra {
   background: var(--voice-extra);
 }
+
+.Debug .control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.Debug .control select {
+  padding: 6px 8px;
+  background: var(--white-10);
+  border: var(--border);
+  border-radius: var(--radius-small);
+  color: var(--white-100);
+  font: inherit;
+}
+
+.Debug .control input[type='range'] {
+  width: 100%;
+  accent-color: var(--white-100);
+}
+
+.Debug .voice-status {
+  color: var(--white-60);
+}

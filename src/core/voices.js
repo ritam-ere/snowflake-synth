@@ -17,6 +17,22 @@ export const VOICES = {
   }
 }
 
+// Названия инструментов для интерфейса (латиницей, как весь UI)
+export const INSTRUMENT_LABELS = {
+  whirly: 'Whirly',
+  celesta: 'Celesta',
+  'music-box': 'Music box',
+  vibraphone: 'Vibraphone',
+  'church-organ': 'Church organ',
+  'warm-pad': 'Warm pad',
+  harp: 'Harp',
+  'soft-sine': 'Soft sine',
+  'fm-keys': 'FM keys',
+  'fm-piano': 'FM piano',
+  glockenspiel: 'Glockenspiel',
+  kalimba: 'Kalimba'
+}
+
 // Приводит настройку голоса к допустимому значению.
 // Возвращает undefined, если значение принять нельзя
 export function normalizeVoiceSetting(voice, key, value) {
