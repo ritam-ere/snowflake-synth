@@ -115,3 +115,64 @@
 .Debug .voice-status {
   color: var(--white-60);
 }
+
+.Debug .section {
+  margin-top: 56px;
+}
+
+.Debug .effects {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+}
+
+.Debug .effect {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--white-4);
+  border: var(--border);
+  border-radius: var(--radius-card);
+}
+
+.Debug .effect-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.Debug .links {
+  display: flex;
+  gap: 4px;
+}
+
+.Debug .link {
+  width: 32px;
+  height: 32px;
+  border: var(--border);
+  border-radius: 50%;
+  color: var(--white-60);
+}
+
+.Debug .link.on {
+  color: var(--white-100);
+}
+
+.Debug .link-lead.on {
+  background: var(--voice-lead);
+}
+
+.Debug .link-bass.on {
+  background: var(--voice-bass);
+}
+
+.Debug .link-extra.on {
+  background: var(--voice-extra);
+}
+
+.Debug .control input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--white-100);
+}

@@ -3,6 +3,7 @@
 // так же будет работать настоящий интерфейс.
 
 import { createEngine } from './audio/engine.js'
+import { EFFECTS, EFFECT_TYPES, defaultSettings } from './core/effects.js'
 import { createInitialState, reducer } from './core/state.js'
 import { INSTRUMENT_LABELS, VOICE_IDS, VOICES } from './core/voices.js'
 
@@ -15,7 +16,8 @@ window.snowflake = {
   get state() {
     return state
   },
-  change
+  change,
+  bench
 }
 
 const STATUS_TEXT = {
@@ -96,6 +98,121 @@ function renderLabels() {
   })
 }
 
+// ---------- Эффекты ----------
+// Временный стенд: свои настройки эффектов, без нод ядра.
+// Связь с состоянием ядра появится в задаче 1.5
+
+const VOICE_SHORT = { lead: 'L', bass: 'B', extra: 'E' }
+
+const bench = Object.fromEntries(
+  EFFECT_TYPES.map((type) => [
+    type,
+    { settings: defaultSettings(type), voices: new Set() }
+  ])
+)
+
+function formatParam(param, value) {
+  if (param.kind === 'toggle') return value ? 'yes' : 'no'
+  if (param.kind === 'options') return String(value)
+  if (param.max <= 1) return `${Math.round(value * 100)}%`
+  if (param.max >= 1000) return `${(value / 1000).toFixed(1)} kHz`
+  return value.toFixed(1)
+}
+
+function paramControl(type, name, param, value) {
+  const data = `data-effect="${type}" data-param="${name}"`
+
+  if (param.kind === 'range') {
+    const step = (param.max - param.min) / 100
+    return `<input type="range" min="${param.min}" max="${param.max}"
+      step="${step}" value="${value}" ${data} />`
+  }
+
+  if (param.kind === 'options') {
+    const options = param.options
+      .map(
+        (option, i) =>
+          `<option value="${i}" ${option === value ? 'selected' : ''}>${option}</option>`
+      )
+      .join('')
+    return `<select ${data}>${options}</select>`
+  }
+
+  return `<input type="checkbox" ${value ? 'checked' : ''} ${data} />`
+}
+
+function renderEffects() {
+  const container = document.getElementById('effects')
+
+  container.innerHTML = EFFECT_TYPES.map((type) => {
+    const { settings } = bench[type]
+    const params = Object.entries(EFFECTS[type].params)
+      .map(
+        ([name, param]) => `
+          <label class="control text-small">
+            <span>${name} <span data-value="${type}-${name}">${formatParam(
+              param,
+              settings[name]
+            )}</span></span>
+            ${paramControl(type, name, param, settings[name])}
+          </label>`
+      )
+      .join('')
+
+    const toggles = VOICE_IDS.map(
+      (id) =>
+        `<button class="link link-${id} text-small" data-link="${type}"
+          data-voice="${id}">${VOICE_SHORT[id]}</button>`
+    ).join('')
+
+    return `
+      <div class="effect">
+        <div class="effect-head">
+          <span class="text-button">${EFFECTS[type].label}</span>
+          <span class="links">${toggles}</span>
+        </div>
+        ${params}
+      </div>
+    `
+  }).join('')
+}
+
+function toggleLink(type, voiceId, button) {
+  const { settings, voices } = bench[type]
+  const key = `${type}:${voiceId}`
+
+  if (voices.has(voiceId)) {
+    voices.delete(voiceId)
+    engine.removeEffect(key)
+    button.classList.remove('on')
+  } else {
+    voices.add(voiceId)
+    engine.addEffect(key, voiceId, type, settings)
+    button.classList.add('on')
+  }
+}
+
+function handleEffectInput(event) {
+  const { effect: type, param: name } = event.target.dataset
+  if (!type) return
+
+  const param = EFFECTS[type].params[name]
+  let value
+  if (param.kind === 'range') value = Number(event.target.value)
+  else if (param.kind === 'options')
+    value = param.options[Number(event.target.value)]
+  else value = event.target.checked
+
+  const entry = bench[type]
+  entry.settings = { ...entry.settings, [name]: value }
+  entry.voices.forEach((id) =>
+    engine.setEffect(`${type}:${id}`, entry.settings)
+  )
+
+  document.querySelector(`[data-value="${type}-${name}"]`).textContent =
+    formatParam(param, value)
+}
+
 function setStatus(text) {
   document.getElementById('status').textContent = text
 }
@@ -120,8 +237,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const button = document.getElementById('play')
   const voices = document.getElementById('voices')
 
+  const effects = document.getElementById('effects')
+
   renderVoices()
+  renderEffects()
   voices.addEventListener('input', handleInput)
+  effects.addEventListener('input', handleEffectInput)
+  effects.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-link]')
+    if (!button || !engine.effectKeys) return
+    if (!engine.voices.lead) {
+      setStatus('Сначала нажмите Play')
+      return
+    }
+    toggleLink(button.dataset.link, button.dataset.voice, button)
+  })
   engine.onStatus(renderLabels)
 
   button.addEventListener('click', async () => {
