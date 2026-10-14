@@ -1,0 +1,142 @@
+.Dropdown {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 156px;
+  user-select: none;
+}
+
+/* Плашка: внешний слой White 20 с отступом 2, внутри White 10 */
+.Dropdown-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 25px;
+  padding: 0 8px 0 7px;
+  background: var(--white-10);
+  border-radius: var(--radius-small);
+  box-shadow: inset 0 0 0 2px var(--white-20);
+  color: var(--white-100);
+  outline: none;
+  cursor: pointer;
+}
+
+.Dropdown-button:hover,
+.Dropdown.is-open .Dropdown-button {
+  background: var(--white-20);
+}
+
+.Dropdown.is-keyboard .Dropdown-button:focus {
+  box-shadow:
+    inset 0 0 0 2px var(--white-20),
+    0 0 0 2px var(--white-60);
+}
+
+.Dropdown-value {
+  /* Запас по вертикали, чтобы обрезка по ширине не срезала хвосты букв */
+  padding: 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.Dropdown-status {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+}
+
+.Dropdown-status svg {
+  display: block;
+  overflow: visible;
+}
+
+.Dropdown-status path {
+  fill: none;
+  stroke: var(--white-100);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Загрузка: три точки мигают по очереди */
+.Dropdown-status.is-loading i {
+  width: 3px;
+  height: 3px;
+  background: var(--white-100);
+  border-radius: 50%;
+  animation: dropdown-loading 900ms ease-in-out infinite;
+}
+
+.Dropdown-status.is-loading i:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.Dropdown-status.is-loading i:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+@keyframes dropdown-loading {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+
+  40% {
+    opacity: 1;
+  }
+}
+
+.Dropdown-status.is-error {
+  font-size: 14px;
+}
+
+/* Список: поверх всего под кнопкой, в стиле Steps */
+.Dropdown-list {
+  position: absolute;
+  top: 27px;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  margin: 0;
+  padding: 2px;
+  list-style: none;
+  background: var(--background);
+  border: var(--border);
+  border-radius: var(--radius-small);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.Dropdown-option {
+  display: flex;
+  align-items: center;
+  height: 25px;
+  padding: 0 7px;
+  background: var(--white-4);
+  border-radius: var(--radius-small);
+  color: var(--white-60);
+  cursor: pointer;
+}
+
+.Dropdown-option.is-active {
+  color: var(--white-100);
+  background: var(--white-10);
+}
+
+.Dropdown-option.is-selected {
+  background: var(--white-100);
+  color: var(--text-on-white);
+}
+
+.Dropdown-label {
+  width: 100%;
+  text-align: center;
+}
