@@ -1,0 +1,15 @@
+/* Базовые стили. Токены и шрифт подключаются в задаче 0.2 */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background-color: #151515;
+  color: #ffffff;
+}
