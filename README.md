@@ -4,6 +4,8 @@
 
 Учебный проект курса ADC GID.
 
+Сайт: https://ritam-ere.github.io/snowflake-synth/ (обновляется автоматически после каждого мержа в `main`)
+
 ## Стек
 
 - [Bun](https://bun.sh): dev-сервер, сборка, тесты
