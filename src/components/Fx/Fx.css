@@ -28,3 +28,59 @@
   flex-direction: column;
   gap: 4px;
 }
+
+/* Контролы: блок 156 px по центру ноды, позиции из кита
+   (в ките нода 209 px, контролы с left 27) */
+.FxControls {
+  position: relative;
+  width: 156px;
+  height: 100%;
+  margin: 0 auto;
+  /* Обводка поинтеров кнобов и полосок — цвет карточки ноды */
+  --knob-outline: #1e1e1e;
+  --strip-outline: #1e1e1e;
+}
+
+.FxControls-slot {
+  position: absolute;
+}
+
+.FxControls-slot.is-left {
+  top: 16px;
+  left: 0;
+}
+
+.FxControls-slot.is-right {
+  top: 16px;
+  left: 86px;
+}
+
+.FxControls-slot.is-left-steps {
+  top: 17px;
+  left: 0;
+}
+
+.FxControls-slot.is-strip {
+  top: 112px;
+  left: 0;
+}
+
+.FxControls-slot.is-left-low {
+  top: 110px;
+  left: 0;
+}
+
+.FxControls-slot.is-right-low {
+  top: 109px;
+  left: 86px;
+}
+
+.FxControls-slot.is-time {
+  top: 113px;
+  left: 0;
+}
+
+.FxControls-slot.is-pingpong {
+  top: 209px;
+  left: 0;
+}

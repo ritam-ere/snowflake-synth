@@ -1,4 +1,6 @@
-import React, { useEffect, useReducer } from 'react'
+import React, { useEffect, useReducer, useRef } from 'react'
+
+import { createEngine } from '../../audio/engine.js'
 
 import { createInitialState, reducer } from '../../core/state.js'
 import { VOICE_IDS } from '../../core/voices.js'
@@ -19,6 +21,35 @@ export default function App() {
 
   const panelOpen = state.layout.panelOpen
   useEffect(() => savePanelOpen(panelOpen), [panelOpen])
+
+  // Звук: движок читает состояние ядра и пересобирает аудиограф
+  // при каждом изменении. Браузер разрешает звук только после жеста
+  // пользователя, поэтому музыка стартует по первому клику
+  // (подсказка поверх экрана — задача 3.4)
+  const engine = useRef(null)
+  if (!engine.current) engine.current = createEngine()
+  const latest = useRef(state)
+  latest.current = state
+
+  useEffect(() => {
+    engine.current.update(state)
+  }, [state])
+
+  useEffect(() => {
+    function start() {
+      document.removeEventListener('pointerdown', start, true)
+      engine.current.start(latest.current)
+    }
+    document.addEventListener('pointerdown', start, true)
+    window.snowflake = {
+      engine: engine.current,
+      get state() {
+        return latest.current
+      },
+      dispatch
+    }
+    return () => document.removeEventListener('pointerdown', start, true)
+  }, [])
 
   function handleChange(property, value) {
     dispatch({ type: 'CHANGE', property, value })
