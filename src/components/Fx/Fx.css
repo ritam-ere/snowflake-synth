@@ -1,6 +1,8 @@
 .Fx {
   position: relative;
-  transition: box-shadow 120ms linear;
+  transition:
+    box-shadow 120ms linear,
+    opacity var(--voice-duration) linear;
   flex: none;
   width: 100%;
   background: var(--white-4);
@@ -108,4 +110,13 @@
   box-shadow: none;
   outline: 2px dashed var(--link-color);
   outline-offset: 0;
+}
+
+.Fx-lamp {
+  display: flex;
+}
+
+/* Режим связей: ноды, не подключённые к открытому голосу */
+.Fx.is-dimmed {
+  opacity: 0.3;
 }
