@@ -75,6 +75,9 @@ export default function Knob({
   const angle = START + SWEEP * normal
 
   const [showValue, setShowValue] = useState(false)
+  // Рамка фокуса — только когда на кноб перешли клавишей Tab,
+  // при вращении мышью, пальцем или стрелками её нет
+  const [keyboard, setKeyboard] = useState(false)
   const drag = useRef(null)
   const hideTimer = useRef(null)
   const mask = useRef(`knob-hole-${maskId++}`)
@@ -101,7 +104,8 @@ export default function Knob({
     if (event.button !== 0) return
     event.preventDefault()
     event.currentTarget.setPointerCapture(event.pointerId)
-    event.currentTarget.focus()
+    event.currentTarget.focus({ focusVisible: false })
+    setKeyboard(false)
     // Нормализованное значение копится в ref, а не пересчитывается
     // из value: так дробные значения не теряются при медленном движении
     drag.current = { y: event.clientY, normal }
@@ -134,6 +138,10 @@ export default function Knob({
     event.preventDefault()
     const step = event.shiftKey ? BIG_STEP : STEP
     setNormal(normal + (event.deltaY < 0 ? step : -step))
+  }
+
+  function handleKeyUp(event) {
+    if (event.key === 'Tab') setKeyboard(true)
   }
 
   function handleKeyDown(event) {
@@ -171,7 +179,7 @@ export default function Knob({
     <div className="Knob">
       <div
         ref={body}
-        className="Knob-body"
+        className={keyboard ? 'Knob-body is-keyboard' : 'Knob-body'}
         role="slider"
         tabIndex={0}
         aria-label={name}
@@ -185,6 +193,8 @@ export default function Knob({
         onPointerCancel={handlePointerUp}
         onDoubleClick={handleDoubleClick}
         onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onBlur={() => setKeyboard(false)}
       >
         <svg
           width={VIEW_W}
