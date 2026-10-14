@@ -12,6 +12,10 @@
 /* Бейдж: по центру над верхним краем */
 .Fx-badge {
   position: absolute;
+  z-index: 2;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
   top: -9px;
   left: 50%;
   padding: 4px 2px;
@@ -153,4 +157,34 @@ body.is-linking .Fx-unlink {
 /* Режим связей: ноды, не подключённые к открытому голосу */
 .Fx.is-dimmed {
   opacity: 0.3;
+}
+
+/* Перетаскивание (5.2): на месте ноды — пунктирный плейсхолдер */
+.Fx.is-placeholder {
+  background: none;
+  outline: 2px dashed var(--white-20);
+  outline-offset: -2px;
+}
+
+.Fx.is-placeholder > * {
+  visibility: hidden;
+}
+
+/* Призрак — копия ноды, которая едет за указателем */
+.Fx-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 70;
+  margin: 0;
+  background: #222;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+body.is-moving-node,
+body.is-moving-node * {
+  cursor: grabbing !important;
+  user-select: none;
 }
