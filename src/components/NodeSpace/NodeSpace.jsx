@@ -8,7 +8,7 @@ import Fx from '../Fx/Fx.jsx'
 // Поле нод: колонки из состояния ядра (4 при раскрытой панели, 5 при
 // свёрнутой). Карточка Add Effect — в конце колонки, куда ляжет
 // следующая нода. Кнопки Edit и Export внизу справа пока неактивны
-export default function NodeSpace({ state, drag, handleChange }) {
+export default function NodeSpace({ state, drag, dispatch, handleChange }) {
   const focusVoice = state.ui.openVoice
   const { columns } = state.layout
   const addColumn = nextColumnIndex(state)
@@ -25,6 +25,9 @@ export default function NodeSpace({ state, drag, handleChange }) {
                 nodeId={nodeId}
                 linkTarget={drag?.target === nodeId ? drag.voice : null}
                 focusVoice={focusVoice}
+                handleUnlink={(voice, id) =>
+                  dispatch({ type: 'UNLINK', voice, nodeId: id })
+                }
                 handleChange={handleChange}
               />
             ))}
