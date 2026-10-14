@@ -9,6 +9,8 @@
   background: var(--white-2);
   border: var(--border);
   border-radius: var(--radius-card);
+  overflow: hidden;
+  transition: width var(--panel-duration) var(--panel-easing);
 }
 
 .SnowflakePanel.is-closed {
@@ -24,7 +26,13 @@
 /* Клин-драфт: заготовка снежинки, центр чуть ниже середины панели */
 .SnowflakePanel-wedge {
   display: block;
+  flex: none;
   margin-top: 34px;
+  transition: opacity var(--panel-duration) var(--panel-easing);
+}
+
+.SnowflakePanel.is-closed .SnowflakePanel-wedge {
+  opacity: 0;
 }
 
 .SnowflakePanel-wedge path {
