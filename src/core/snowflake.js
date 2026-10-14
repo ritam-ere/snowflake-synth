@@ -26,11 +26,11 @@ export const ANGLE = Math.atan(TAN) // ≈ 19,6°
 export const COS = Math.cos(ANGLE)
 export const SIN = Math.sin(ANGLE)
 
-export const SPINE = 8 // хребет вдоль правого сгиба
-export const MARGIN = 8 // перемычки между зонами
+export const SPINE = 3 // хребет вдоль правого сгиба
+export const MARGIN = 5 // перемычки между зонами — тонкие, как в ажуре
 export const APEX = 40 // нетронутая вершина
-export const EDGE_DEPTH = 56 // глубина зоны края
-export const FOLD_DEPTH = 24 // глубина зоны сгиба (поперёк сгиба)
+export const EDGE_DEPTH = 64 // глубина зоны края
+export const FOLD_DEPTH = 30 // глубина зоны сгиба (поперёк сгиба)
 
 export const SLOTS = 12 // максимум нод — по 12 слотов в каждой зоне
 

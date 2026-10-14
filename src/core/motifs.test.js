@@ -56,21 +56,34 @@ describe('мотивы вырезов', () => {
     }
   }
 
-  test('pitchShift: −12 / +7 / +12 — 4 / 5 / 6 лучей', () => {
+  test('pitchShift: −12 / +7 / +12 — звезда в 4 / 5 / 6 лучей', () => {
     for (const [interval, rays] of [
       [-12, 4],
       [7, 5],
       [12, 6]
     ]) {
-      const [star] = motif(cutOf('pitchShift', { interval }))
-      expect(star.d.split('L').length).toBe(rays * 2)
+      const star = motif(cutOf('pitchShift', { interval }))[2]
+      expect(star.d.split('L').length).toBe(rays * 2 + 1)
     }
   })
 
-  test('reverb: чем дольше Decay, тем больше кругов', () => {
-    const short = motif(cutOf('reverb', { decay: 0 }))
-    const long = motif(cutOf('reverb', { decay: 1 }))
-    expect(short.length).toBe(1)
-    expect(long.length).toBeGreaterThan(3)
+  test('reverb: чем дольше Decay, тем больше колец', () => {
+    const rings = (decay) =>
+      motif(cutOf('reverb', { decay })).filter((s) => s.shape === 'circle')
+    expect(rings(0).length).toBe(1)
+    expect(rings(1).length).toBeGreaterThan(3)
+  })
+
+  test('ажур: вырез открывает область, бумажный узор остаётся', () => {
+    for (const type of EFFECT_TYPES) {
+      const shapes = motif(cutOf(type))
+      expect(shapes[0].paper).toBeUndefined()
+      expect(shapes.slice(1).every((s) => s.paper && s.stroke > 0)).toBe(true)
+    }
+  })
+
+  test('Mix делает узор тоньше', () => {
+    const width = (mix) => motif(cutOf('reverb', { mix }))[1].stroke
+    expect(width(1)).toBeLessThan(width(0.1))
   })
 })

@@ -12,7 +12,7 @@ import {
 
 // Сложенный клин снежинки в панели (задача 6.1), форма — из макета. Геометрия и узор —
 // чистые функции из core/snowflake.js; здесь только рисование.
-// Вырезы — мотивы эффектов по таблице раздела 9 (core/motifs.js),
+// Вырезы — ажурные мотивы эффектов по таблице раздела 9 (core/motifs.js),
 // каждый обрезан по своей области зоны.
 //
 // Координаты клина: x — от хребта влево, y — от вершины вверх.
@@ -59,22 +59,22 @@ const CREASE = (() => {
 // Координаты клина → SVG: хребет справа, вершина внизу
 const WEDGE_SPACE = `translate(${WIDTH} ${L}) scale(-1 -1)`
 
+// В маске белое — бумага, чёрное — пустота. Фигура с толщиной stroke —
+// линия (бумажный узор), без неё — залитый вырез
 function Shape({ item }) {
   const color = item.paper ? 'white' : 'black'
-  if (item.shape === 'circle') {
-    return <circle cx={item.cx} cy={item.cy} r={item.r} fill={color} />
+  const line = {
+    fill: item.stroke ? 'none' : color,
+    stroke: item.stroke ? color : 'none',
+    strokeWidth: item.stroke,
+    strokeLinejoin: item.join || 'round',
+    strokeMiterlimit: 10,
+    strokeLinecap: 'round'
   }
-  const open = !item.d.endsWith('Z')
-  return (
-    <path
-      d={item.d}
-      fill={open ? 'none' : color}
-      stroke={item.stroke ? color : 'none'}
-      strokeWidth={item.stroke}
-      strokeLinejoin="round"
-      strokeLinecap="round"
-    />
-  )
+  if (item.shape === 'circle') {
+    return <circle cx={item.cx} cy={item.cy} r={item.r} {...line} />
+  }
+  return <path d={item.d} {...line} />
 }
 
 // Вырез одной ноды: мотив эффекта, обрезанный по своей области
