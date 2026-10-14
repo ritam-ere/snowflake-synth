@@ -1,0 +1,40 @@
+/* Упрощённый сброс стилей (по мотивам Eric Meyer reset, как в репозиториях курса) */
+html,
+body,
+div,
+span,
+h1,
+h2,
+h3,
+h4,
+p,
+a,
+ul,
+ol,
+li,
+button,
+input,
+label,
+section,
+main,
+aside,
+header,
+footer,
+svg {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  vertical-align: baseline;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+button {
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}

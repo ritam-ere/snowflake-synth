@@ -1,3 +1,6 @@
+@import 'stylesheets/vars.css';
+@import 'stylesheets/reset.css';
+@import 'stylesheets/fonts.css';
 @import 'stylesheets/basics.css';
 
 @import 'components/App/App.css';

@@ -1,0 +1,9 @@
+/* Вариативный шрифт: насыщенность (wght) 300–700 */
+@font-face {
+  font-family: 'ABC Maxi Round Plus';
+  src: url('../assets/fonts/ABCMaxiRoundPlusVariableTrial.ttf')
+    format('truetype');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
