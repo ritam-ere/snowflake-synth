@@ -9,8 +9,8 @@ import Strip from '../Strip/Strip.jsx'
 // Плашка голоса (Voice tab из кита), состояния:
 //   Default    — цвет голоса, название, точка внизу;
 //   Hover верх — верх темнее, нижняя полоса 32px остаётся цветом голоса;
-//   Hover низ  — нижняя полоса темнее, точка становится «+» (отсюда
-//                тянется связь к ноде — задача 4.3);
+//   Hover низ  — нижняя полоса темнее, точка становится «+»: отсюда
+//                тянется связь к ноде (useLinkDrag);
 //   Open       — клик по верху: Channel, Instrument, Volume.
 // Открыта может быть только одна плашка; Esc закрывает (см. App).
 
@@ -26,14 +26,17 @@ export default function VoiceTab({
   open,
   status,
   handleChange,
-  handleOpen
+  handleOpen,
+  handleLinkStart,
+  linking = false
 }) {
   const property = (key) => ['voices', id, key]
   const classes = ['VoiceTab', `VoiceTab-${id}`]
   if (open) classes.push('is-open')
+  if (linking) classes.push('is-linking')
 
   return (
-    <section className={classes.join(' ')} aria-label={id}>
+    <section className={classes.join(' ')} aria-label={id} data-voice-tab={id}>
       {/* Верхняя зона: в закрытой плашке — название и клик «открыть»,
           в открытой — подложка под контролами, клик по пустому месту закрывает */}
       <button
@@ -85,8 +88,12 @@ export default function VoiceTab({
         </div>
       )}
 
-      {/* Нижняя зона 32px: отсюда тянется связь к ноде (задача 4.3) */}
-      <div className="VoiceTab-bottom">
+      {/* Нижняя зона 32px: зажать и тянуть к ноде — связь голоса с эффектом */}
+      <div
+        className="VoiceTab-bottom"
+        title="Drag to an effect"
+        onPointerDown={(event) => handleLinkStart(id, event)}
+      >
         <span className="VoiceTab-dot">
           <span className="VoiceTab-dot-default">
             <Dot voice={id} />

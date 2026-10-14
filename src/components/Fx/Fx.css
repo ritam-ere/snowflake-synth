@@ -1,5 +1,6 @@
 .Fx {
   position: relative;
+  transition: box-shadow 120ms linear;
   flex: none;
   width: 100%;
   background: var(--white-4);
@@ -83,4 +84,28 @@
 .FxControls-slot.is-pingpong {
   top: 209px;
   left: 0;
+}
+
+/* Цель протягиваемой связи: обводка цвета голоса */
+.Fx.is-link-lead {
+  --link-color: var(--voice-lead);
+}
+
+.Fx.is-link-bass {
+  --link-color: var(--voice-bass);
+}
+
+.Fx.is-link-extra {
+  --link-color: var(--voice-extra);
+}
+
+.Fx.is-link-target {
+  box-shadow: 0 0 0 2px var(--link-color);
+}
+
+/* Голос уже подключён к этой ноде — пунктир вместо сплошной */
+.Fx.is-linked-already {
+  box-shadow: none;
+  outline: 2px dashed var(--link-color);
+  outline-offset: 0;
 }

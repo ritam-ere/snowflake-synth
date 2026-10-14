@@ -7,14 +7,22 @@ import FxControls from './FxControls.jsx'
 
 // Нода эффекта (Fx из кита): карточка высотой из кита, бейдж с названием
 // сверху, «лампочки» подключённых голосов слева и контролы по киту
-export default function Fx({ state, nodeId, handleChange }) {
+export default function Fx({ state, nodeId, linkTarget, handleChange }) {
   const node = state.nodes[nodeId]
   const spec = EFFECTS[node.type]
   const voices = voicesOfNode(state, nodeId)
 
+  // Подсветка, когда над нодой отпускают протянутую связь
+  const classes = ['Fx', `Fx-${node.type}`]
+  if (linkTarget) {
+    classes.push('is-link-target', `is-link-${linkTarget}`)
+    if (voices.includes(linkTarget)) classes.push('is-linked-already')
+  }
+
   return (
     <article
-      className={`Fx Fx-${node.type}`}
+      className={classes.join(' ')}
+      data-node-id={nodeId}
       style={{ height: spec.height }}
       aria-label={spec.label}
     >

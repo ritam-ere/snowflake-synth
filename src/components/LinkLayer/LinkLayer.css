@@ -1,0 +1,41 @@
+.LinkLayer {
+  position: fixed;
+  inset: 0;
+  /* Над полем нод, но под рядом голосов: точка «+» остаётся поверх кривой */
+  z-index: 1;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+.LinkLayer-lead {
+  --link-color: var(--voice-lead);
+}
+
+.LinkLayer-bass {
+  --link-color: var(--voice-bass);
+}
+
+.LinkLayer-extra {
+  --link-color: var(--voice-extra);
+}
+
+.LinkLayer-curve {
+  fill: none;
+  stroke: var(--link-color);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.LinkLayer-end {
+  fill: var(--link-color);
+  stroke: var(--background);
+  stroke-width: 4;
+}
+
+/* Пока тянем связь: курсор «держу», текст не выделяется */
+body.is-linking,
+body.is-linking * {
+  cursor: grabbing !important;
+  user-select: none;
+}
