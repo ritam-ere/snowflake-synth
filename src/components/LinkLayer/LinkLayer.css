@@ -27,6 +27,18 @@
   stroke-linecap: round;
 }
 
+/* Линии режима связей тоньше протягиваемой связи */
+.LinkLayer-curve.is-line {
+  stroke-width: 2;
+  animation: link-lines var(--voice-duration) linear;
+}
+
+@keyframes link-lines {
+  from {
+    opacity: 0;
+  }
+}
+
 .LinkLayer-end {
   fill: var(--link-color);
   stroke: var(--background);

@@ -7,13 +7,21 @@ import FxControls from './FxControls.jsx'
 
 // Нода эффекта (Fx из кита): карточка высотой из кита, бейдж с названием
 // сверху, «лампочки» подключённых голосов слева и контролы по киту
-export default function Fx({ state, nodeId, linkTarget, handleChange }) {
+export default function Fx({
+  state,
+  nodeId,
+  linkTarget,
+  focusVoice,
+  handleChange
+}) {
   const node = state.nodes[nodeId]
   const spec = EFFECTS[node.type]
   const voices = voicesOfNode(state, nodeId)
 
   // Подсветка, когда над нодой отпускают протянутую связь
   const classes = ['Fx', `Fx-${node.type}`]
+  // Режим связей: открыта плашка голоса — ноды без него затемнены
+  if (focusVoice && !voices.includes(focusVoice)) classes.push('is-dimmed')
   if (linkTarget) {
     classes.push('is-link-target', `is-link-${linkTarget}`)
     if (voices.includes(linkTarget)) classes.push('is-linked-already')
@@ -31,7 +39,9 @@ export default function Fx({ state, nodeId, linkTarget, handleChange }) {
       {voices.length > 0 && (
         <span className="Fx-dots">
           {voices.map((voice) => (
-            <Dot key={voice} voice={voice} />
+            <span key={voice} className="Fx-lamp" data-lamp={voice}>
+              <Dot voice={voice} />
+            </span>
           ))}
         </span>
       )}

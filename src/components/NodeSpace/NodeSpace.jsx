@@ -9,6 +9,7 @@ import Fx from '../Fx/Fx.jsx'
 // свёрнутой). Карточка Add Effect — в конце колонки, куда ляжет
 // следующая нода. Кнопки Edit и Export внизу справа пока неактивны
 export default function NodeSpace({ state, drag, handleChange }) {
+  const focusVoice = state.ui.openVoice
   const { columns } = state.layout
   const addColumn = nextColumnIndex(state)
 
@@ -23,6 +24,7 @@ export default function NodeSpace({ state, drag, handleChange }) {
                 state={state}
                 nodeId={nodeId}
                 linkTarget={drag?.target === nodeId ? drag.voice : null}
+                focusVoice={focusVoice}
                 handleChange={handleChange}
               />
             ))}

@@ -136,7 +136,7 @@ export default function App() {
           handleChange={handleChange}
         />
       </div>
-      <LinkLayer drag={drag} />
+      <LinkLayer drag={drag} voice={state.ui.openVoice} />
       <StartOverlay status={audio} handleStart={startAudio} />
     </main>
   )
