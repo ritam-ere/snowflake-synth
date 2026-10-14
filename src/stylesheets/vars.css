@@ -1,0 +1,61 @@
+/* Дизайн-токены из макета Figma (раздел 5.1 ТЗ) */
+:root {
+  /* Фон */
+  --background: #151515;
+
+  /* Голоса */
+  --voice-lead: #053bff;
+  --voice-lead-dark: #0023a3;
+  --voice-bass: #d00d0d;
+  --voice-bass-dark: #8a0909; /* в макете не задан — затемнение по аналогии с lead */
+  --voice-extra: #9bb700;
+  --voice-extra-dark: #677a00; /* в макете не задан — затемнение по аналогии с lead */
+
+  /* Белый с прозрачностью */
+  --white-2: rgba(255, 255, 255, 0.02);
+  --white-4: rgba(255, 255, 255, 0.04);
+  --white-10: rgba(255, 255, 255, 0.1);
+  --white-20: rgba(255, 255, 255, 0.2);
+  --white-60: rgba(255, 255, 255, 0.6);
+  --white-100: #ffffff;
+
+  /* Служебные цвета */
+  --badge: #3d3d3d; /* бейдж с названием ноды */
+  --text-on-white: #272727; /* текст на активном step */
+
+  /* Типографика */
+  --font-family:
+    'ABC Maxi Round Plus', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+
+  --text-voice-size: 100px; /* Voice Headline */
+  --text-voice-weight: 519;
+  --text-voice-tracking: -2px;
+
+  --text-button-size: 24px;
+  --text-button-tracking: -0.48px;
+
+  --text-label-size: 16px; /* подписи контролов */
+  --text-label-tracking: -0.32px;
+
+  --text-small-size: 14px; /* steps и бейджи */
+  --text-small-tracking: -0.28px;
+
+  /* Радиусы и обводки */
+  --radius-card: 18px;
+  --radius-small: 2px;
+  --radius-dot: 100px;
+  --border: 1px solid var(--white-10);
+
+  /* Раскладка */
+  --screen-padding: 12px;
+  --gap-main: 16px;
+  --gap-music: 8px;
+  --panel-open-width: 324px;
+  --panel-closed-width: 80px;
+  --voice-height: 160px;
+  --voice-bottom-zone: 32px;
+  --button-size: 54px;
+  --icon-size: 28px;
+  --dot-size: 10px;
+  --dot-size-large: 32px;
+}

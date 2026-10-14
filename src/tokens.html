@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Snowflake Synth — токены</title>
+    <link rel="stylesheet" href="./tokens.css" />
+  </head>
+
+  <body class="Tokens">
+    <h1 class="text-button">Токены и типографика</h1>
+    <p class="text-label note">
+      Служебная страница для сверки с Figma. Подписи на русском набраны
+      запасным шрифтом: в ABC Maxi Round Plus нет кириллицы.
+    </p>
+
+    <h2 class="text-label section">Текст</h2>
+
+    <div class="row">
+      <span class="text-voice">lead</span>
+      <span class="text-small caption">Voice Headline · 100 / 519 / −2</span>
+    </div>
+    <div class="row">
+      <span class="text-button" style="color: var(--white-60)">Edit</span>
+      <span class="text-button" style="color: var(--white-20)">F</span>
+      <span class="text-small caption">Button · 24 / −0.48</span>
+    </div>
+    <div class="row">
+      <span class="text-label">Decay Mix Feedback PingPong</span>
+      <span class="text-small caption">Label · 16 / −0.32</span>
+    </div>
+    <div class="row">
+      <span class="text-small">REVERB 1/8 1/4 sine +12</span>
+      <span class="text-small caption">Small · 14 / −0.28</span>
+    </div>
+
+    <h2 class="text-label section">Насыщенность (вариативная ось 300–700)</h2>
+    <div class="row">
+      <span class="text-button" style="font-weight: 300">Light 300</span>
+      <span class="text-button" style="font-weight: 400">Regular 400</span>
+      <span class="text-button" style="font-weight: 519">Voice 519</span>
+      <span class="text-button" style="font-weight: 700">Bold 700</span>
+    </div>
+
+    <h2 class="text-label section">Голоса</h2>
+    <div class="row">
+      <div class="voice" style="background: var(--voice-lead)">
+        <span class="text-voice">lead</span>
+      </div>
+      <div class="voice" style="background: var(--voice-bass)">
+        <span class="text-voice">bass</span>
+      </div>
+      <div class="voice" style="background: var(--voice-extra)">
+        <span class="text-voice">extra</span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="swatch" style="background: var(--voice-lead-dark)"></div>
+      <div class="swatch" style="background: var(--voice-bass-dark)"></div>
+      <div class="swatch" style="background: var(--voice-extra-dark)"></div>
+      <span class="text-small caption">hover-оттенки (bass и extra — по аналогии с lead)</span>
+    </div>
+
+    <h2 class="text-label section">Белый с прозрачностью</h2>
+    <div class="row">
+      <div class="swatch" style="background: var(--white-2)"></div>
+      <div class="swatch" style="background: var(--white-4)"></div>
+      <div class="swatch" style="background: var(--white-10)"></div>
+      <div class="swatch" style="background: var(--white-20)"></div>
+      <div class="swatch" style="background: var(--white-60)"></div>
+      <div class="swatch" style="background: var(--white-100)"></div>
+      <span class="text-small caption">2 · 4 · 10 · 20 · 60 · 100%</span>
+    </div>
+
+    <h2 class="text-label section">Поверхности</h2>
+    <div class="row">
+      <div class="card"><span class="text-small caption">Fx · white 4 · r 18</span></div>
+      <div class="card card-dashed">
+        <span class="text-button" style="color: var(--white-20)">+ Add Effect</span>
+      </div>
+      <div class="badge text-small">REVERB</div>
+      <div class="step text-small">1/8</div>
+      <div class="step step-active text-small">1/4</div>
+    </div>
+  </body>
+</html>

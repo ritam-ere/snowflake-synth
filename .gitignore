@@ -2,3 +2,7 @@ node_modules
 dist
 .DS_Store
 *.log
+
+# Шрифт с trial-лицензией: только локально, не публикуется
+src/assets/fonts/*.ttf
+src/assets/fonts/*.otf
