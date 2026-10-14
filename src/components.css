@@ -3,6 +3,7 @@
 @import 'stylesheets/fonts.css';
 @import 'stylesheets/basics.css';
 
+@import 'components/Dropdown/Dropdown.css';
 @import 'components/Knob/Knob.css';
 @import 'components/Steps/Steps.css';
 @import 'components/Strip/Strip.css';
@@ -87,4 +88,10 @@
 .Showcase .voice-extra {
   --strip-outline: var(--voice-extra);
   background: var(--voice-extra);
+}
+
+/* Карточки голосов чуть шире, чтобы раскрытый список было видно */
+.Showcase .voice-card {
+  min-width: 210px;
+  min-height: 150px;
 }

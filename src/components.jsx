@@ -1,11 +1,13 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import Dropdown from './components/Dropdown/Dropdown.jsx'
 import Knob from './components/Knob/Knob.jsx'
 import Steps from './components/Steps/Steps.jsx'
 import StepsPair from './components/Steps/StepsPair.jsx'
 import Strip from './components/Strip/Strip.jsx'
 import { EFFECTS, EFFECT_TYPES, defaultSettings } from './core/effects.js'
+import { INSTRUMENT_LABELS, VOICES, VOICE_IDS } from './core/voices.js'
 
 // Витрина контролов: каждый контрол как в ките и с текущим значением.
 // Состояние витрины — как у будущего App: value + handleChange(property, value)
@@ -29,6 +31,10 @@ function Showcase() {
   const [values, setValues] = useState(() => ({
     kit: { half: 0.5, threeQuarters: 0.75 },
     voice: { lead: 80, bass: 80, extra: 80 },
+    instrument: Object.fromEntries(
+      VOICE_IDS.map((id) => [id, VOICES[id].defaults.instrument])
+    ),
+    status: { lead: 'ready', bass: 'ready', extra: 'ready' },
     ...Object.fromEntries(
       EFFECT_TYPES.map((type) => [type, defaultSettings(type)])
     )
@@ -40,6 +46,26 @@ function Showcase() {
       ...prev,
       [group]: { ...prev[group], [key]: value }
     }))
+  }
+
+  // Витрина изображает загрузку сэмплов: 1,5 с после выбора инструмента.
+  // Soft sine и FM keys — синтезаторы, грузить им нечего; Harp — пример ошибки
+  const timers = useRef({})
+  function handleInstrument(property, value) {
+    const [, voice] = property
+    handleChange(property, value)
+    clearTimeout(timers.current[voice])
+
+    if (value === 'soft-sine' || value === 'fm-keys') {
+      handleChange(['status', voice], 'ready')
+      return
+    }
+    handleChange(['status', voice], 'loading')
+    timers.current[voice] = setTimeout(
+      () =>
+        handleChange(['status', voice], value === 'harp' ? 'error' : 'ready'),
+      1500
+    )
   }
 
   return (
@@ -238,6 +264,35 @@ function Showcase() {
               />
               <span className="text-small value">
                 volume {Math.round(values.voice[voice])}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-button">Dropdown</h2>
+        <p className="text-label hint">
+          Инструмент голоса. Клик или Enter открывает список, стрелки — по
+          вариантам, Escape закрывает. На витрине выбор изображает загрузку
+          сэмплов (точки), Harp — пример ошибки загрузки.
+        </p>
+
+        <div className="row">
+          {VOICE_IDS.map((voice) => (
+            <div className={`card voice-card voice-${voice}`} key={voice}>
+              <span className="text-small card-title">{voice}</span>
+              <Dropdown
+                name="Instrument"
+                property={['instrument', voice]}
+                value={values.instrument[voice]}
+                options={VOICES[voice].instruments}
+                labels={INSTRUMENT_LABELS}
+                status={values.status[voice]}
+                handleChange={handleInstrument}
+              />
+              <span className="text-small value">
+                {values.instrument[voice]} · {values.status[voice]}
               </span>
             </div>
           ))}
