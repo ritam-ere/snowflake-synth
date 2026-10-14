@@ -1,4 +1,24 @@
+/* Экран 1280 × 832: панель снежинки слева, справа голоса и поле нод */
 .App {
+  display: flex;
+  gap: var(--gap-main);
   width: 100vw;
   height: 100vh;
+  min-width: 1024px;
+  min-height: 640px;
+  padding: var(--screen-padding);
+}
+
+.App-music {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--gap-music);
+  min-width: 0;
+}
+
+.App-voices {
+  display: flex;
+  flex: none;
+  gap: var(--gap-music);
 }
