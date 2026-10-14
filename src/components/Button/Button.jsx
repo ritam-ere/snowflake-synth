@@ -7,6 +7,8 @@ import Icon from '../Icon/Icon.jsx'
 //   icon + text  — Icon + Text;
 //   text         — Text;
 //   text + hotkey — Text + Hotkey (клавиша приглушена).
+// faint — блеклая кнопка (текст White 20), например Add Effect;
+//   она активна, при наведении текст White 60.
 // label — подпись для экранного диктора, если у кнопки только иконка.
 
 export default function Button({
@@ -15,12 +17,14 @@ export default function Button({
   hotkey,
   label,
   active = false,
+  faint = false,
   disabled = false,
   handleClick
 }) {
   const type = icon && text ? 'icon-text' : icon ? 'icon' : 'text'
   const classes = ['Button', `Button-${type}`]
   if (active) classes.push('is-active')
+  if (faint) classes.push('is-faint')
 
   return (
     <button

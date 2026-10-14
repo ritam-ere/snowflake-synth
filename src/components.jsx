@@ -399,11 +399,18 @@ function Showcase() {
                   handleChange(['ui', 'clicks'], values.ui.clicks + 1)
                 }
               />
-              <Button icon="add" text="Add Effect" disabled />
+              <Button
+                icon="add"
+                text="Add Effect"
+                faint
+                handleClick={() =>
+                  handleChange(['ui', 'adds'], (values.ui.adds ?? 0) + 1)
+                }
+              />
             </div>
             <span className="text-small value">
               panel {values.ui.panel ? 'open' : 'closed'} · export clicks{' '}
-              {values.ui.clicks}
+              {values.ui.clicks} · add clicks {values.ui.adds ?? 0}
             </span>
           </div>
         </div>

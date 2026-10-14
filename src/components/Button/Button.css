@@ -20,6 +20,15 @@
   color: var(--white-100);
 }
 
+.Button.is-faint {
+  color: var(--white-20);
+}
+
+/* Блеклая кнопка при наведении светлеет на одну ступень */
+.Button.is-faint:hover:not(:disabled) {
+  color: var(--white-60);
+}
+
 .Button:focus-visible {
   box-shadow: 0 0 0 2px var(--white-20);
 }
