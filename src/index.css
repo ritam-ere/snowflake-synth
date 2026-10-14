@@ -4,6 +4,7 @@
 @import 'stylesheets/basics.css';
 
 @import 'components/AddFx/AddFx.css';
+@import 'components/AddFxPopover/AddFxPopover.css';
 @import 'components/App/App.css';
 @import 'components/Button/Button.css';
 @import 'components/Dot/Dot.css';

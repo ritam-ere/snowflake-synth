@@ -1,15 +1,25 @@
-import React from 'react'
+import React, { useRef, useState } from 'react'
 
-import { canAddNodes, nextColumnIndex } from '../../core/state.js'
+import {
+  MAX_NODES,
+  canAddNodes,
+  nextColumnIndex,
+  nodeCount
+} from '../../core/state.js'
 import AddFx from '../AddFx/AddFx.jsx'
+import AddFxPopover from '../AddFxPopover/AddFxPopover.jsx'
 import Button from '../Button/Button.jsx'
 import Fx from '../Fx/Fx.jsx'
 
 // Поле нод: колонки из состояния ядра (4 при раскрытой панели, 5 при
 // свёрнутой). Карточка Add Effect — в конце колонки, куда ляжет
-// следующая нода. Кнопки Edit и Export внизу справа пока неактивны
+// следующая нода, клик по ней открывает выбор эффектов.
+// Кнопки Edit и Export внизу справа пока неактивны
 export default function NodeSpace({ state, drag, dispatch, handleChange }) {
   const focusVoice = state.ui.openVoice
+  const addCard = useRef(null)
+  const [adding, setAdding] = useState(false)
+  const canAdd = canAddNodes(state)
   const { columns } = state.layout
   const addColumn = nextColumnIndex(state)
 
@@ -31,10 +41,29 @@ export default function NodeSpace({ state, drag, dispatch, handleChange }) {
                 handleChange={handleChange}
               />
             ))}
-            {i === addColumn && <AddFx disabled={!canAddNodes(state)} />}
+            {i === addColumn && (
+              <AddFx
+                ref={addCard}
+                disabled={!canAdd}
+                open={adding}
+                handleClick={() => setAdding((open) => !open)}
+              />
+            )}
           </div>
         ))}
       </div>
+
+      {adding && canAdd && (
+        <AddFxPopover
+          anchor={addCard.current}
+          room={MAX_NODES - nodeCount(state)}
+          handleAdd={(types) => {
+            dispatch({ type: 'ADD_NODES', types })
+            setAdding(false)
+          }}
+          handleClose={() => setAdding(false)}
+        />
+      )}
 
       <div className="NodeSpace-buttons">
         <Button text="Edit" hotkey="F" />
