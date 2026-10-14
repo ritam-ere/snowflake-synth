@@ -166,12 +166,114 @@ export function seedOf(id) {
   return (hash >>> 0) / 4294967296
 }
 
+// ---------- Области вырезов ----------
+// Зона делится между её активными вырезами по порядку постоянных слотов:
+// чем меньше вырезов в зоне, тем просторнее каждому. Порядок слотов
+// не зависит от колонок, поэтому перестановка нод узор не меняет.
+// Каждый мотив рисуется внутри своей области (обрезается по ней),
+// поэтому зоны и перемычки никогда не нарушаются.
+
+// Середина существует, где клин шире хребта, сгиба и перемычек
+const CENTER_MIN_WIDTH = 12
+export const CENTER_TOP = L - EDGE_DEPTH - MARGIN
+export const CENTER_BOTTOM = Math.max(
+  APEX + MARGIN,
+  (SPINE + MARGIN + (FOLD_DEPTH + MARGIN) / COS + CENTER_MIN_WIDTH) / TAN
+)
+
+// Левая граница середины на высоте y (дальше от хребта — зона сгиба)
+export function centerLimit(y) {
+  return widthAt(y) - (FOLD_DEPTH + MARGIN) / COS
+}
+
+// Середина: горизонтальные полосы снизу вверх, между ними перемычки
+function centerRegions(count) {
+  const height = (CENTER_TOP - CENTER_BOTTOM - MARGIN * (count - 1)) / count
+  return Array.from({ length: count }, (_, i) => {
+    const y0 = CENTER_BOTTOM + i * (height + MARGIN)
+    const y1 = y0 + height
+    const x0 = SPINE + MARGIN
+    return {
+      kind: 'band',
+      y0,
+      y1,
+      x0,
+      // трапеция: правая сторона по хребту, левая вдоль сгиба
+      polygon: [
+        [x0, y0],
+        [centerLimit(y0), y0],
+        [centerLimit(y1), y1],
+        [x0, y1]
+      ]
+    }
+  })
+}
+
+// Край: верхняя кромка от хребта до зоны сгиба, отрезки через перемычки
+export const EDGE_FROM = SPINE + MARGIN
+export const EDGE_TO = WIDTH - FOLD_DEPTH / COS - MARGIN
+
+function edgeRegions(count) {
+  const size = (EDGE_TO - EDGE_FROM - MARGIN * (count - 1)) / count
+  return Array.from({ length: count }, (_, i) => {
+    const x0 = EDGE_FROM + i * (size + MARGIN)
+    const x1 = x0 + size
+    const y0 = L - EDGE_DEPTH
+    return {
+      kind: 'edge',
+      x0,
+      x1,
+      y0,
+      y1: L,
+      polygon: [
+        [x0, y0],
+        [x1, y0],
+        [x1, L + 20],
+        [x0, L + 20]
+      ]
+    }
+  })
+}
+
+// Сгиб: левая кромка от вершины до зоны края; s — расстояние вдоль
+// сгиба от вершины. Точка на сгибе: (s·sin α, s·cos α), внутрь клина —
+// нормаль (−cos α, sin α)
+export const FOLD_FROM = (APEX + MARGIN) / COS
+export const FOLD_TO = (L - EDGE_DEPTH - MARGIN) / COS
+
+export function foldPoint(s, inward = 0) {
+  return [s * SIN - inward * COS, s * COS + inward * SIN]
+}
+
+function foldRegions(count) {
+  const size = (FOLD_TO - FOLD_FROM - MARGIN * (count - 1)) / count
+  return Array.from({ length: count }, (_, i) => {
+    const s0 = FOLD_FROM + i * (size + MARGIN)
+    const s1 = s0 + size
+    return {
+      kind: 'fold',
+      s0,
+      s1,
+      depth: FOLD_DEPTH,
+      polygon: [
+        foldPoint(s0, -20),
+        foldPoint(s1, -20),
+        foldPoint(s1, FOLD_DEPTH),
+        foldPoint(s0, FOLD_DEPTH)
+      ]
+    }
+  })
+}
+
+const REGIONS = { center: centerRegions, edge: edgeRegions, folds: foldRegions }
+
 // ---------- Узор ----------
 
 // Вырезы по состоянию: только ноды, подключённые хотя бы к одному
-// голосу, и только с Mix > 0. Порядок — по id ноды, не по колонкам
+// голосу, и только с Mix > 0. У каждого — зона, постоянный слот,
+// область в зоне (по порядку слотов) и сид
 export function snowflakePattern(state) {
-  return Object.values(state.nodes)
+  const cuts = Object.values(state.nodes)
     .filter((node) => voicesOfNode(state, node.id).length > 0)
     .filter((node) => node.settings.mix > 0)
     .sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
@@ -181,11 +283,24 @@ export function snowflakePattern(state) {
         nodeId: node.id,
         type: node.type,
         zone,
+        slotIndex: node.slot % SLOTS,
         slot: SLOT_GEOMETRY[zone][node.slot % SLOTS],
         settings: node.settings,
         seed: seedOf(node.id)
       }
     })
+
+  Object.keys(REGIONS).forEach((zone) => {
+    const inZone = cuts
+      .filter((cut) => cut.zone === zone)
+      .sort((a, b) => a.slotIndex - b.slotIndex)
+    const regions = REGIONS[zone](inZone.length)
+    inZone.forEach((cut, i) => {
+      cut.region = regions[i]
+    })
+  })
+
+  return cuts
 }
 
 // ---------- Разворот ----------

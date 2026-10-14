@@ -1,5 +1,6 @@
 import React from 'react'
 
+import { motif } from '../../core/motifs.js'
 import {
   ANGLE,
   COS,
@@ -11,8 +12,8 @@ import {
 
 // Сложенный клин снежинки в панели (задача 6.1), форма — из макета. Геометрия и узор —
 // чистые функции из core/snowflake.js; здесь только рисование.
-// Вырезы пока простые заглушки (круг, выемка, полукруг), размер — по Mix;
-// мотивы каждого эффекта по таблице раздела 9 — задача 6.2.
+// Вырезы — мотивы эффектов по таблице раздела 9 (core/motifs.js),
+// каждый обрезан по своей области зоны.
 //
 // Координаты клина: x — от хребта влево, y — от вершины вверх.
 // В SVG вершина внизу, хребет справа, как в макете.
@@ -55,28 +56,42 @@ const CREASE = (() => {
   return `M ${x0} ${y0} L ${x1} ${y1}`
 })()
 
-function Cut({ cut }) {
-  const amount = 0.35 + 0.65 * cut.settings.mix
-  const { slot } = cut
+// Координаты клина → SVG: хребет справа, вершина внизу
+const WEDGE_SPACE = `translate(${WIDTH} ${L}) scale(-1 -1)`
 
-  if (cut.zone === 'center') {
-    const [cx, cy] = toSvg(slot.x, slot.y)
-    return <circle cx={cx} cy={cy} r={slot.radius * amount} />
+function Shape({ item }) {
+  const color = item.paper ? 'white' : 'black'
+  if (item.shape === 'circle') {
+    return <circle cx={item.cx} cy={item.cy} r={item.r} fill={color} />
   }
+  const open = !item.d.endsWith('Z')
+  return (
+    <path
+      d={item.d}
+      fill={open ? 'none' : color}
+      stroke={item.stroke ? color : 'none'}
+      strokeWidth={item.stroke}
+      strokeLinejoin="round"
+      strokeLinecap="round"
+    />
+  )
+}
 
-  if (cut.zone === 'edge') {
-    const [x0] = toSvg(slot.to, L)
-    const width = slot.to - slot.from
-    const depth = slot.depth * amount
-    return (
-      <rect x={x0 + 3} y={-12} width={width - 6} height={12 + depth} rx="6" />
-    )
-  }
-
-  // folds: полукруглая выемка на левом сгибе
-  const middle = (slot.from + slot.to) / 2
-  const [cx, cy] = toSvg(middle * SIN, middle * COS)
-  return <circle cx={cx} cy={cy} r={slot.depth * amount} />
+// Вырез одной ноды: мотив эффекта, обрезанный по своей области
+function Cut({ cut, clipId }) {
+  const points = cut.region.polygon.map(([x, y]) => `${x},${y}`).join(' ')
+  return (
+    <>
+      <clipPath id={clipId}>
+        <polygon points={points} />
+      </clipPath>
+      <g clipPath={`url(#${clipId})`}>
+        {motif(cut).map((item, i) => (
+          <Shape key={i} item={item} />
+        ))}
+      </g>
+    </>
+  )
 }
 
 let maskCounter = 0
@@ -97,9 +112,13 @@ export default function Snowflake({ state }) {
       <defs>
         <mask id={mask.current}>
           <path d={WEDGE} fill="white" />
-          <g fill="black">
+          <g transform={WEDGE_SPACE}>
             {cuts.map((cut) => (
-              <Cut key={cut.nodeId} cut={cut} />
+              <Cut
+                key={cut.nodeId}
+                cut={cut}
+                clipId={`${mask.current}-${cut.nodeId}`}
+              />
             ))}
           </g>
         </mask>
