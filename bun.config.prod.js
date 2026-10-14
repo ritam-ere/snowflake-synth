@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { cpSync, existsSync } from 'node:fs'
 
 const FONT_PATH = './src/assets/fonts/ABCMaxiRoundPlusVariableTrial.ttf'
 
@@ -34,4 +34,7 @@ if (!result.success) {
   process.exit(1)
 }
 
-console.log(`Собрано файлов: ${result.outputs.length}`)
+// Сэмплы инструментов — статикой, загружаются только при выборе инструмента
+cpSync('./src/assets/samples', './dist/samples', { recursive: true })
+
+console.log(`Собрано файлов: ${result.outputs.length}, сэмплы скопированы`)

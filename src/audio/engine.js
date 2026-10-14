@@ -1,5 +1,6 @@
 // Звуковой движок: голоса по MIDI, инструменты, каналы, транспорт.
-// Читает состояние ядра, но ничего в нём не меняет.
+// Читает состояние ядра, но ничего в нём не меняет: интерфейс меняет
+// состояние через редьюсер, а потом передаёт его сюда в update(state).
 
 import * as Tone from 'tone'
 
@@ -13,9 +14,15 @@ import extraMidiUrl from '../data/midi/extra.mid'
 
 const MIDI_URLS = { lead: leadMidiUrl, bass: bassMidiUrl, extra: extraMidiUrl }
 
-// Громкость голоса 0–100 → децибелы канала (0 = тишина)
+// Плавность изменений, чтобы не было щелчков
+const RAMP_SECONDS = 0.05
+// Сколько ждать хвоста старого инструмента перед удалением
+const DISPOSE_DELAY_MS = 3000
+const SILENCE_DB = -80
+
+// Громкость голоса 0–100 → децибелы канала
 export function volumeToDb(volume) {
-  return volume <= 0 ? -Infinity : Tone.gainToDb(volume / 100)
+  return volume <= 0 ? SILENCE_DB : Tone.gainToDb(volume / 100)
 }
 
 async function loadMidi(url) {
@@ -25,15 +32,27 @@ async function loadMidi(url) {
 
 export function createEngine() {
   const voices = {}
+  const listeners = new Set()
   let master = null
   let meter = null
-  let loaded = false
+  let loading = null
 
-  // Загрузка MIDI и сэмплов, сборка графа. Звук ещё не идёт
-  async function load(state) {
-    if (loaded) return
+  // ---------- Статусы инструментов (для индикатора загрузки) ----------
 
-    // Общий выход: лимитер не даёт сумме голосов перегружаться
+  function setStatus(id, status, error = null) {
+    voices[id].status = status
+    voices[id].error = error
+    listeners.forEach((listener) => listener(id, status, error))
+  }
+
+  function onStatus(listener) {
+    listeners.add(listener)
+    return () => listeners.delete(listener)
+  }
+
+  // ---------- Загрузка ----------
+
+  async function build(state) {
     master = new Tone.Limiter(-1).toDestination()
     meter = new Tone.Meter({ normalRange: true, smoothing: 0.8 })
     master.connect(meter)
@@ -45,21 +64,24 @@ export function createEngine() {
     transport.bpm.value = midis[0].bpm
     transport.timeSignature = midis[0].timeSignature[0]
 
-    VOICE_IDS.forEach((id, i) => {
+    const loads = VOICE_IDS.map((id, i) => {
       const midi = midis[i]
       const settings = state.voices[id]
 
-      const instrument = createInstrument(settings.instrument)
       const channel = new Tone.Channel({
         volume: volumeToDb(settings.volume),
+        mute: settings.volume <= 0,
         pan: settings.pan
       }).connect(master)
 
+      const { instrument, loaded } = createInstrument(settings.instrument)
       instrument.connect(channel)
 
+      // Колбэк берёт текущий инструмент голоса: после смены
+      // инструмента новые ноты сразу играет новый
       const part = new Tone.Part(
         (time, event) => {
-          instrument.triggerAttackRelease(
+          voices[id].instrument.triggerAttackRelease(
             event.note,
             event.duration,
             time,
@@ -68,22 +90,101 @@ export function createEngine() {
         },
         midiToEvents(midi, transport.PPQ)
       )
-
       part.loop = true
       part.loopEnd = `${loopLengthTicks(midi, transport.PPQ)}i`
       part.start(0)
 
-      voices[id] = { instrument, channel, part, noteCount: midi.notes.length }
+      voices[id] = {
+        instrument,
+        instrumentId: settings.instrument,
+        requestedId: settings.instrument,
+        channel,
+        part,
+        noteCount: midi.notes.length,
+        status: 'loading',
+        error: null
+      }
+
+      return loaded.then(() => setStatus(id, 'ready'))
     })
 
-    await Tone.loaded()
-    loaded = true
+    await Promise.all(loads)
   }
+
+  function load(state) {
+    if (!loading) loading = build(state)
+    return loading
+  }
+
+  // ---------- Смена инструмента ----------
+
+  // Пока грузится новый инструмент, играет прежний. Если за время загрузки
+  // выбрали ещё один, устаревший результат выбрасывается
+  async function switchInstrument(id, instrumentId) {
+    const voice = voices[id]
+    if (voice.requestedId === instrumentId) return
+
+    voice.requestedId = instrumentId
+    setStatus(id, 'loading')
+
+    const { instrument, loaded } = createInstrument(instrumentId)
+
+    try {
+      await loaded
+    } catch (error) {
+      instrument?.dispose()
+      if (voice.requestedId === instrumentId) {
+        voice.requestedId = voice.instrumentId
+        setStatus(id, 'error', error)
+      }
+      return
+    }
+
+    if (voice.requestedId !== instrumentId) {
+      instrument.dispose()
+      return
+    }
+
+    const old = voice.instrument
+    instrument.connect(voice.channel)
+    voice.instrument = instrument
+    voice.instrumentId = instrumentId
+
+    // Старый инструмент доигрывает хвосты нот и удаляется
+    old.releaseAll?.()
+    setTimeout(() => old.dispose(), DISPOSE_DELAY_MS)
+
+    setStatus(id, 'ready')
+  }
+
+  // ---------- Синхронизация с состоянием ядра ----------
+
+  function update(state) {
+    if (!loading) return
+
+    VOICE_IDS.forEach((id) => {
+      const voice = voices[id]
+      if (!voice) return
+
+      const settings = state.voices[id]
+
+      voice.channel.mute = settings.volume <= 0
+      voice.channel.volume.rampTo(volumeToDb(settings.volume), RAMP_SECONDS)
+      voice.channel.pan.rampTo(settings.pan, RAMP_SECONDS)
+
+      if (settings.instrument !== voice.requestedId) {
+        switchInstrument(id, settings.instrument)
+      }
+    })
+  }
+
+  // ---------- Транспорт ----------
 
   // Запуск по жесту пользователя (требование браузера)
   async function start(state) {
     await Tone.start()
     await load(state)
+    update(state)
     Tone.getTransport().start('+0.05')
   }
 
@@ -106,5 +207,15 @@ export function createEngine() {
     return meter ? meter.getValue() : 0
   }
 
-  return { load, start, stop, isPlaying, position, level, voices }
+  return {
+    load,
+    start,
+    stop,
+    update,
+    onStatus,
+    isPlaying,
+    position,
+    level,
+    voices
+  }
 }
