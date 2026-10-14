@@ -4,6 +4,7 @@
 @import 'stylesheets/basics.css';
 
 @import 'components/Knob/Knob.css';
+@import 'components/Steps/Steps.css';
 
 /* Витрина контролов (как elements-react в synth-controls) */
 .Showcase {

@@ -1,0 +1,103 @@
+.Steps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+}
+
+.Steps-options {
+  display: flex;
+  gap: 2px;
+  border-radius: var(--radius-small);
+  outline: none;
+}
+
+.Steps.is-keyboard .Steps-options:focus {
+  box-shadow: 0 0 0 2px var(--white-20);
+}
+
+.Steps-option {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  background: var(--white-4);
+  border-radius: var(--radius-small);
+  color: var(--white-60);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.Steps-option:hover:not(.is-active) {
+  color: var(--white-100);
+}
+
+.Steps-option.is-active {
+  background: var(--white-100);
+  color: var(--text-on-white);
+  cursor: default;
+}
+
+.Steps-label {
+  width: 100%;
+  text-align: center;
+}
+
+/* Столбик: 70 × 65, три строки через 2px */
+.Steps-vertical {
+  width: 70px;
+}
+
+.Steps-vertical .Steps-options {
+  flex-direction: column;
+  width: 100%;
+  height: 65px;
+}
+
+/* Строка в плашке: 156 × 25, padding 2 */
+.Steps-horizontal {
+  width: 156px;
+}
+
+.Steps-horizontal .Steps-options {
+  width: 100%;
+  height: 25px;
+  padding: 2px;
+  background: var(--white-4);
+}
+
+/* Time у Delay: два столбика по 77 через 2px, подписи L · Time · R */
+.StepsPair {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 156px;
+}
+
+.StepsPair-columns {
+  display: flex;
+  gap: 2px;
+}
+
+.StepsPair-steps {
+  flex: 1 1 0;
+  width: auto;
+}
+
+/* У столбиков пары своих подписей нет — только общая */
+.StepsPair-steps .Steps-label {
+  display: none;
+}
+
+.StepsPair-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 3px;
+}
+
+.StepsPair-side {
+  opacity: 0.2;
+}
