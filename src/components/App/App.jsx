@@ -4,6 +4,8 @@ import { createEngine } from '../../audio/engine.js'
 
 import { createInitialState, reducer } from '../../core/state.js'
 import { VOICE_IDS } from '../../core/voices.js'
+import LinkLayer from '../LinkLayer/LinkLayer.jsx'
+import useLinkDrag from '../LinkLayer/useLinkDrag.js'
 import NodeSpace from '../NodeSpace/NodeSpace.jsx'
 import SnowflakePanel from '../SnowflakePanel/SnowflakePanel.jsx'
 import StartOverlay from '../StartOverlay/StartOverlay.jsx'
@@ -35,6 +37,12 @@ export default function App() {
   useEffect(() => {
     engine.current.update(state)
   }, [state])
+
+  // Протягивание связи голос → нода
+  const { drag, startDrag } = useLinkDrag(dispatch)
+  useEffect(() => {
+    document.body.classList.toggle('is-linking', Boolean(drag))
+  }, [drag !== null])
 
   // Статусы загрузки инструментов голосов (точки в Dropdown)
   const [statuses, setStatuses] = useState({})
@@ -115,16 +123,20 @@ export default function App() {
               status={statuses[id]}
               handleChange={handleChange}
               handleOpen={(voice) => dispatch({ type: 'OPEN_VOICE', voice })}
+              handleLinkStart={startDrag}
+              linking={drag?.voice === id}
             />
           ))}
         </div>
 
         <NodeSpace
           state={state}
+          drag={drag}
           dispatch={dispatch}
           handleChange={handleChange}
         />
       </div>
+      <LinkLayer drag={drag} />
       <StartOverlay status={audio} handleStart={startAudio} />
     </main>
   )

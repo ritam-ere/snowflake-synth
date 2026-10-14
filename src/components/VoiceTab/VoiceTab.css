@@ -105,7 +105,13 @@
   transition: background-color var(--voice-duration) linear;
 }
 
-.VoiceTab-bottom:hover {
+.VoiceTab-bottom {
+  cursor: grab;
+  touch-action: none;
+}
+
+.VoiceTab-bottom:hover,
+.VoiceTab.is-linking .VoiceTab-bottom {
   background: var(--voice-dark);
 }
 
@@ -127,10 +133,12 @@
   --dot-color: var(--voice-dark);
 }
 
-.VoiceTab-bottom:hover .VoiceTab-dot-default {
+.VoiceTab-bottom:hover .VoiceTab-dot-default,
+.VoiceTab.is-linking .VoiceTab-dot-default {
   display: none;
 }
 
-.VoiceTab-bottom:hover .VoiceTab-dot-add {
+.VoiceTab-bottom:hover .VoiceTab-dot-add,
+.VoiceTab.is-linking .VoiceTab-dot-add {
   display: flex;
 }
