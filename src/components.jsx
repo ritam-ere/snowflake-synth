@@ -1,7 +1,10 @@
 import React, { useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import Button from './components/Button/Button.jsx'
+import Dot from './components/Dot/Dot.jsx'
 import Dropdown from './components/Dropdown/Dropdown.jsx'
+import Icon, { ICONS } from './components/Icon/Icon.jsx'
 import Knob from './components/Knob/Knob.jsx'
 import Steps from './components/Steps/Steps.jsx'
 import StepsPair from './components/Steps/StepsPair.jsx'
@@ -35,6 +38,8 @@ function Showcase() {
       VOICE_IDS.map((id) => [id, VOICES[id].defaults.instrument])
     ),
     status: { lead: 'ready', bass: 'ready', extra: 'ready' },
+    links: { lead: true, bass: true, extra: false },
+    ui: { panel: true, clicks: 0 },
     ...Object.fromEntries(
       EFFECT_TYPES.map((type) => [type, defaultSettings(type)])
     )
@@ -296,6 +301,111 @@ function Showcase() {
               </span>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-button">Dot</h2>
+        <p className="text-label hint">
+          Точки связи голоса: Default — голос подключён, Add link — подключить,
+          Delete link — отключить. Ниже — как это работает: клик по большой
+          точке переключает связь.
+        </p>
+
+        <div className="row">
+          <div className="card card-plain">
+            <span className="text-small card-title">Kit</span>
+            <div className="controls dots">
+              {VOICE_IDS.map((voice) => (
+                <div className="dot-column" key={voice}>
+                  <Dot voice={voice} />
+                  <Dot voice={voice} variant="add" />
+                  <Dot voice={voice} variant="delete" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card card-plain">
+            <span className="text-small card-title">Link toggle</span>
+            <div className="controls dots">
+              {VOICE_IDS.map((voice) => {
+                const linked = values.links[voice]
+                return (
+                  <div className="dot-column" key={voice}>
+                    <Dot
+                      voice={voice}
+                      variant={linked ? 'delete' : 'add'}
+                      label={`${linked ? 'Unlink' : 'Link'} ${voice}`}
+                      handleClick={() =>
+                        handleChange(['links', voice], !linked)
+                      }
+                    />
+                    <span className="text-small value">
+                      {linked ? 'linked' : '—'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-button">Button &amp; Icons</h2>
+        <p className="text-label hint">
+          Четыре типа кнопки из кита и иконки Add, Export, Collapse.
+        </p>
+
+        <div className="row">
+          <div className="card">
+            <span className="text-small card-title">Button</span>
+            <div className="buttons">
+              <Button icon="add" label="Add" />
+              <Button icon="add" text="Next" />
+              <Button text="Next" />
+              <Button text="Next" hotkey="F" />
+            </div>
+          </div>
+
+          <div className="card">
+            <span className="text-small card-title">Icons</span>
+            <div className="controls icons">
+              {ICONS.map((name) => (
+                <div className="icon-cell" key={name}>
+                  <Icon name={name} />
+                  <span className="text-small value">{name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card">
+            <span className="text-small card-title">In use</span>
+            <div className="buttons">
+              <Button
+                icon="collapse"
+                label="Collapse panel"
+                active={!values.ui.panel}
+                handleClick={() =>
+                  handleChange(['ui', 'panel'], !values.ui.panel)
+                }
+              />
+              <Button
+                icon="export"
+                label="Export"
+                handleClick={() =>
+                  handleChange(['ui', 'clicks'], values.ui.clicks + 1)
+                }
+              />
+              <Button icon="add" text="Add Effect" disabled />
+            </div>
+            <span className="text-small value">
+              panel {values.ui.panel ? 'open' : 'closed'} · export clicks{' '}
+              {values.ui.clicks}
+            </span>
+          </div>
         </div>
       </section>
     </main>
