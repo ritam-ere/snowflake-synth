@@ -33,5 +33,11 @@ export function formatValue(value, { unit }) {
   if (unit === 'kHz') return `${(value / 1000).toFixed(1)} kHz`
   if (unit === 'oct') return `${value.toFixed(1)} oct`
   if (unit === 'st') return `${value > 0 ? '+' : ''}${value}`
+  if (unit === 'pan') {
+    const amount = Math.round(Math.abs(value) * 100)
+    if (amount === 0) return 'M'
+    return `${value < 0 ? 'L' : 'R'}${amount}`
+  }
+  if (unit === 'vol') return String(Math.round(value))
   return String(value)
 }

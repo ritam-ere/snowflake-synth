@@ -36,6 +36,27 @@ export default function App() {
     engine.current.update(state)
   }, [state])
 
+  // Статусы загрузки инструментов голосов (точки в Dropdown)
+  const [statuses, setStatuses] = useState({})
+  useEffect(
+    () =>
+      engine.current.onStatus((id, status) =>
+        setStatuses((prev) => ({ ...prev, [id]: status }))
+      ),
+    []
+  )
+
+  // Esc закрывает открытую плашку голоса
+  const openVoice = state.ui.openVoice
+  useEffect(() => {
+    if (!openVoice) return
+    function handleEscape(event) {
+      if (event.key === 'Escape') dispatch({ type: 'OPEN_VOICE', voice: null })
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [openVoice])
+
   // Вызывается прямо в обработчике жеста: Tone.start() внутри
   // должен успеть выполниться, пока жест «свежий» (важно для Safari)
   const started = useRef(false)
@@ -86,7 +107,15 @@ export default function App() {
       <div className="App-music">
         <div className="App-voices">
           {VOICE_IDS.map((id) => (
-            <VoiceTab key={id} id={id} />
+            <VoiceTab
+              key={id}
+              id={id}
+              settings={state.voices[id]}
+              open={state.ui.openVoice === id}
+              status={statuses[id]}
+              handleChange={handleChange}
+              handleOpen={(voice) => dispatch({ type: 'OPEN_VOICE', voice })}
+            />
           ))}
         </div>
 
