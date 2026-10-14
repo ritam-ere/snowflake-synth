@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useRef } from 'react'
+import React, { useEffect, useReducer, useRef, useState } from 'react'
 
 import { createEngine } from '../../audio/engine.js'
 
@@ -6,6 +6,7 @@ import { createInitialState, reducer } from '../../core/state.js'
 import { VOICE_IDS } from '../../core/voices.js'
 import NodeSpace from '../NodeSpace/NodeSpace.jsx'
 import SnowflakePanel from '../SnowflakePanel/SnowflakePanel.jsx'
+import StartOverlay from '../StartOverlay/StartOverlay.jsx'
 import VoiceTab from '../VoiceTab/VoiceTab.jsx'
 import { loadPanelOpen, savePanelOpen } from './storage.js'
 
@@ -24,23 +25,43 @@ export default function App() {
 
   // Звук: движок читает состояние ядра и пересобирает аудиограф
   // при каждом изменении. Браузер разрешает звук только после жеста
-  // пользователя, поэтому музыка стартует по первому клику
-  // (подсказка поверх экрана — задача 3.4)
+  // пользователя, поэтому до первого клика экран закрыт подсказкой
   const engine = useRef(null)
   if (!engine.current) engine.current = createEngine()
   const latest = useRef(state)
   latest.current = state
+  const [audio, setAudio] = useState('idle')
 
   useEffect(() => {
     engine.current.update(state)
   }, [state])
 
+  // Вызывается прямо в обработчике жеста: Tone.start() внутри
+  // должен успеть выполниться, пока жест «свежий» (важно для Safari)
+  const started = useRef(false)
+  function startAudio() {
+    if (started.current) return
+    started.current = true
+    setAudio('loading')
+    engine.current
+      .start(latest.current)
+      .then(() => setAudio('playing'))
+      .catch((error) => {
+        console.error(error)
+        setAudio('error')
+      })
+  }
+
+  // Клавиатура тоже жест: Enter, Space или любая клавиша до старта
+  const startRef = useRef(startAudio)
+  startRef.current = startAudio
   useEffect(() => {
-    function start() {
-      document.removeEventListener('pointerdown', start, true)
-      engine.current.start(latest.current)
+    function handleKey(event) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return
+      startRef.current()
     }
-    document.addEventListener('pointerdown', start, true)
+    window.addEventListener('keydown', handleKey)
+
     window.snowflake = {
       engine: engine.current,
       get state() {
@@ -48,7 +69,7 @@ export default function App() {
       },
       dispatch
     }
-    return () => document.removeEventListener('pointerdown', start, true)
+    return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
   function handleChange(property, value) {
@@ -75,6 +96,7 @@ export default function App() {
           handleChange={handleChange}
         />
       </div>
+      <StartOverlay status={audio} handleStart={startAudio} />
     </main>
   )
 }

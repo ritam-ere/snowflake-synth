@@ -13,6 +13,7 @@
 @import 'components/Knob/Knob.css';
 @import 'components/NodeSpace/NodeSpace.css';
 @import 'components/SnowflakePanel/SnowflakePanel.css';
+@import 'components/StartOverlay/StartOverlay.css';
 @import 'components/Steps/Steps.css';
 @import 'components/Strip/Strip.css';
 @import 'components/VoiceTab/VoiceTab.css';
