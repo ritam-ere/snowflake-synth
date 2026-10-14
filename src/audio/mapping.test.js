@@ -4,43 +4,42 @@ import {
   delayGains,
   distortionAmount,
   reverbRoomSize,
+  sendGain,
   tailSeconds
 } from './mapping.js'
 
 describe('перевод параметров', () => {
-  test('Decay 0–1 → roomSize 0–0.9', () => {
-    expect(reverbRoomSize(0)).toBe(0)
-    expect(reverbRoomSize(0.5)).toBeCloseTo(0.45)
-    expect(reverbRoomSize(1)).toBeCloseTo(0.9)
+  test('Decay 0–1 → roomSize 0.2–0.93, не до бесконечного хвоста', () => {
+    expect(reverbRoomSize(0)).toBeCloseTo(0.2)
+    expect(reverbRoomSize(1)).toBeCloseTo(0.93)
+    expect(reverbRoomSize(1)).toBeLessThan(0.95)
   })
 
-  test('Drive 0–1 → distortion 0–0.5', () => {
-    expect(distortionAmount(0)).toBe(0)
-    expect(distortionAmount(1)).toBe(0.5)
+  test('Drive 0–1 → distortion 0.05–0.8', () => {
+    expect(distortionAmount(0)).toBeCloseTo(0.05)
+    expect(distortionAmount(1)).toBeCloseTo(0.8)
+  })
+
+  test('Mix 0 — посыла нет, Mix растёт — посыл растёт', () => {
+    expect(sendGain(0)).toBe(0)
+    expect(sendGain(1)).toBeGreaterThan(sendGain(0.4))
   })
 })
 
 describe('Delay L/R', () => {
-  test('Ping-Pong: вход слева, эхо перекрёстно', () => {
-    expect(delayGains(0.35, true)).toEqual({
-      inL: 1,
-      inR: 0,
-      LL: 0,
-      RR: 0,
-      LR: 0.35,
-      RL: 0.35
-    })
+  test('Ping-Pong: вход слева, эхо перекрёстно, линии по своим ушам', () => {
+    const g = delayGains(0.35, true)
+    expect([g.inL, g.inR]).toEqual([1, 0])
+    expect([g.LL, g.RR, g.LR, g.RL]).toEqual([0, 0, 0.35, 0.35])
+    expect([g.outLL, g.outLR, g.outRL, g.outRR]).toEqual([1, 0, 0, 1])
   })
 
-  test('без Ping-Pong: обе линии повторяют сами себя', () => {
-    expect(delayGains(0.5, false)).toEqual({
-      inL: 1,
-      inR: 1,
-      LL: 0.5,
-      RR: 0.5,
-      LR: 0,
-      RL: 0
-    })
+  test('без Ping-Pong: линии повторяют сами себя, эхо в обоих ушах', () => {
+    const g = delayGains(0.5, false)
+    expect([g.inL, g.inR]).toEqual([1, 1])
+    expect([g.LL, g.RR, g.LR, g.RL]).toEqual([0.5, 0.5, 0, 0])
+    expect(g.outLL).toBeCloseTo(g.outLR)
+    expect(g.outRL).toBeCloseTo(g.outRR)
   })
 
   test('обратная связь не больше 85% — эхо затухает', () => {

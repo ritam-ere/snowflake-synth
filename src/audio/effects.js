@@ -15,6 +15,7 @@ import {
   delayGains,
   distortionAmount,
   reverbRoomSize,
+  sendGain,
   tailSeconds
 } from './mapping.js'
 
@@ -35,7 +36,7 @@ function reverb(send, output, settings) {
     wet: 1
   })
   // JCReverb заметно громче входа — выравниваем с остальными эффектами
-  const trim = new Tone.Gain(Tone.dbToGain(-8))
+  const trim = new Tone.Gain(Tone.dbToGain(-9))
   send.chain(fx, trim, output)
 
   return {
@@ -44,15 +45,21 @@ function reverb(send, output, settings) {
   }
 }
 
-// Свой стерео-дилей: две линии задержки с разным временем слева и справа
+// Свой стерео-дилей: две линии задержки с разным временем слева и справа.
+// Ping-Pong yes — эхо прыгает между ушами (левая линия слева, правая справа,
+// повторы перекрёстно). Ping-Pong no — каждое эхо звучит в обоих ушах
 function delay(send, output, settings) {
   const mono = new Tone.Mono()
   const lineL = new Tone.Delay({ maxDelay: 2 })
   const lineR = new Tone.Delay({ maxDelay: 2 })
+  // Выход каждой линии: через него идут и звук, и обратная связь.
+  // Его приглушают на время смены Time L/R, чтобы не было «чирика»
+  const tapL = new Tone.Gain(1)
+  const tapR = new Tone.Gain(1)
   const merge = new Tone.Merge()
 
   const gains = {}
-  ;['inL', 'inR', 'LL', 'RR', 'LR', 'RL'].forEach((key) => {
+  Object.keys(delayGains(0, true)).forEach((key) => {
     gains[key] = new Tone.Gain(0)
   })
 
@@ -61,20 +68,53 @@ function delay(send, output, settings) {
   mono.connect(gains.inR)
   gains.inL.connect(lineL)
   gains.inR.connect(lineR)
+  lineL.connect(tapL)
+  lineR.connect(tapR)
 
   // Обратная связь: каждая линия в себя или в соседнюю
-  lineL.connect(gains.LL)
+  tapL.connect(gains.LL)
   gains.LL.connect(lineL)
-  lineR.connect(gains.RR)
+  tapR.connect(gains.RR)
   gains.RR.connect(lineR)
-  lineL.connect(gains.LR)
+  tapL.connect(gains.LR)
   gains.LR.connect(lineR)
-  lineR.connect(gains.RL)
+  tapR.connect(gains.RL)
   gains.RL.connect(lineL)
 
-  lineL.connect(merge, 0, 0)
-  lineR.connect(merge, 0, 1)
+  // Раскладка по ушам
+  tapL.connect(gains.outLL)
+  tapL.connect(gains.outLR)
+  tapR.connect(gains.outRL)
+  tapR.connect(gains.outRR)
+  gains.outLL.connect(merge, 0, 0)
+  gains.outRL.connect(merge, 0, 0)
+  gains.outLR.connect(merge, 0, 1)
+  gains.outRR.connect(merge, 0, 1)
   merge.connect(output)
+
+  const times = { L: null, R: null }
+
+  // Время меняется скачком, но под приглушённым выходом линии:
+  // плавный сдвиг времени задержки слышен как резкий свист, который
+  // потом ещё и повторяется обратной связью
+  function setTime(side, line, tap, value, instant) {
+    const seconds = Tone.Time(value).toSeconds()
+    if (times[side] === seconds) return
+    times[side] = seconds
+
+    if (instant) {
+      line.delayTime.value = seconds
+      return
+    }
+
+    const now = Tone.now()
+    tap.gain.cancelScheduledValues(now)
+    tap.gain.setValueAtTime(tap.gain.getValueAtTime(now), now)
+    tap.gain.linearRampToValueAtTime(0, now + 0.03)
+    line.delayTime.setValueAtTime(seconds, now + 0.035)
+    tap.gain.setValueAtTime(0, now + 0.04)
+    tap.gain.linearRampToValueAtTime(1, now + 0.12)
+  }
 
   function set(s, instant = false) {
     const values = delayGains(s.feedback, s.pingPong)
@@ -83,16 +123,14 @@ function delay(send, output, settings) {
       else ramp(gains[key].gain, value)
     })
     // Время — в долях такта, по темпу Transport
-    ramp(lineL.delayTime, Tone.Time(s.timeL).toSeconds())
-    ramp(lineR.delayTime, Tone.Time(s.timeR).toSeconds())
+    setTime('L', lineL, tapL, s.timeL, instant)
+    setTime('R', lineR, tapR, s.timeR, instant)
   }
 
-  lineL.delayTime.value = Tone.Time(settings.timeL).toSeconds()
-  lineR.delayTime.value = Tone.Time(settings.timeR).toSeconds()
   set(settings, true)
 
   return {
-    nodes: [mono, lineL, lineR, merge, ...Object.values(gains)],
+    nodes: [mono, lineL, lineR, tapL, tapR, merge, ...Object.values(gains)],
     set
   }
 }
@@ -102,7 +140,7 @@ function chorus(send, output, settings) {
     frequency: settings.rate,
     depth: settings.depth,
     type: settings.wave,
-    delayTime: 3.5,
+    delayTime: 6,
     spread: 180,
     wet: 1
   }).start()
@@ -131,7 +169,7 @@ function distortion(send, output, settings) {
     rolloff: -12
   })
   // Перегруз громче исходника — выравниваем
-  const trim = new Tone.Gain(Tone.dbToGain(-6))
+  const trim = new Tone.Gain(Tone.dbToGain(-9))
   send.chain(fx, filter, trim, output)
 
   let drive = settings.drive
@@ -150,14 +188,14 @@ function distortion(send, output, settings) {
   }
 }
 
-// Phaser в духе Phase 72: 4 ступени, мягкий низкий Q
+// Phaser в духе Phase 72: 4 ступени, умеренный Q
 function phaser(send, output, settings) {
   const fx = new Tone.Phaser({
     frequency: settings.freq,
     octaves: settings.oct,
     stages: 4,
-    Q: 2,
-    baseFrequency: 300,
+    Q: 5,
+    baseFrequency: 400,
     wet: 1
   })
   send.chain(fx, output)
@@ -173,6 +211,7 @@ function phaser(send, output, settings) {
 
 function vibrato(send, output, settings) {
   const fx = new Tone.Vibrato({
+    maxDelay: 0.012,
     frequency: settings.rate,
     depth: settings.depth,
     wet: 1
@@ -220,7 +259,7 @@ export function createEffect(type, settings) {
   const factory = FACTORIES[type]
   if (!factory) throw new Error(`Нет эффекта «${type}»`)
 
-  const send = new Tone.Gain(settings.mix)
+  const send = new Tone.Gain(sendGain(settings.mix))
   const output = new Tone.Gain(1)
   const effect = factory(send, output, settings)
 
@@ -230,7 +269,7 @@ export function createEffect(type, settings) {
   function set(next) {
     if (disposed) return
     current = next
-    ramp(send.gain, next.mix)
+    ramp(send.gain, sendGain(next.mix))
     effect.set(next)
   }
 
