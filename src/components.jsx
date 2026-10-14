@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import Knob from './components/Knob/Knob.jsx'
 import Steps from './components/Steps/Steps.jsx'
 import StepsPair from './components/Steps/StepsPair.jsx'
+import Strip from './components/Strip/Strip.jsx'
 import { EFFECTS, EFFECT_TYPES, defaultSettings } from './core/effects.js'
 
 // Витрина контролов: каждый контрол как в ките и с текущим значением.
@@ -27,6 +28,7 @@ function capitalize(name) {
 function Showcase() {
   const [values, setValues] = useState(() => ({
     kit: { half: 0.5, threeQuarters: 0.75 },
+    voice: { lead: 80, bass: 80, extra: 80 },
     ...Object.fromEntries(
       EFFECT_TYPES.map((type) => [type, defaultSettings(type)])
     )
@@ -179,6 +181,66 @@ function Showcase() {
               {String(values.delay.pingPong)}
             </span>
           </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-button">Strips</h2>
+        <p className="text-label hint">
+          Зажать и вести влево-вправо, клик переносит бегунок. Двойной клик —
+          значение по умолчанию, стрелки — мелкий шаг.
+        </p>
+
+        <div className="row">
+          {[
+            ['vibrato', 'rate', 'wave', 'VIBRATO'],
+            ['phaser', 'oct', 'bricks', 'PHASER'],
+            ['distortion', 'tone', 'gradient', 'DISTORTION']
+          ].map(([type, param, variant, title]) => {
+            const spec = EFFECTS[type].params[param]
+            return (
+              <div className="card strip-card" key={type}>
+                <span className="text-small card-title">{title}</span>
+                <Strip
+                  name={capitalize(param)}
+                  property={[type, param]}
+                  value={values[type][param]}
+                  min={spec.min}
+                  max={spec.max}
+                  defaultValue={spec.default}
+                  scale={spec.scale}
+                  unit={spec.unit}
+                  variant={variant}
+                  handleChange={handleChange}
+                />
+                <span className="text-small value">
+                  {param} {+values[type][param].toFixed(3)}
+                </span>
+              </div>
+            )
+          })}
+
+          {['lead', 'bass', 'extra'].map((voice) => (
+            <div
+              className={`card strip-card voice-card voice-${voice}`}
+              key={voice}
+            >
+              <span className="text-small card-title">{voice}</span>
+              <Strip
+                name="Volume"
+                property={['voice', voice]}
+                value={values.voice[voice]}
+                min={0}
+                max={100}
+                defaultValue={80}
+                variant="volume"
+                handleChange={handleChange}
+              />
+              <span className="text-small value">
+                volume {Math.round(values.voice[voice])}
+              </span>
+            </div>
+          ))}
         </div>
       </section>
     </main>
