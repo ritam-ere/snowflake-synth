@@ -34,6 +34,7 @@ const POINTER =
   'M8.37 -6V-0.63L7.707 -0.177L1.162 4.299L0.34 4.861L-0.504 4.333' +
   'L-7.655 -0.144L-8.369 -0.59V-6Z'
 const POINTER_STROKE = 3.04348
+const LINE_W = 3
 
 // Бегущая волна: путь обновляется в requestAnimationFrame напрямую,
 // без перерисовки React на каждом кадре
@@ -162,8 +163,6 @@ export default function Strip({
   }
 
   const label = unit ? formatValue(value, { unit }) : String(value)
-  const withLine = variant === 'gradient' || variant === 'volume'
-
   const classes = ['Strip', `Strip-${variant}`]
   if (keyboard) classes.push('is-keyboard')
 
@@ -203,15 +202,15 @@ export default function Strip({
           )}
           {variant === 'bricks' && <Bricks normal={normal} />}
 
-          {withLine && (
-            <rect
-              className="Strip-line"
-              x={x - 1}
-              y={0}
-              width={2}
-              height={STRIP_H}
-            />
-          )}
+          {/* Указатель: линия на всю высоту полоски цвета обводки бегунка,
+              вместе с бегунком лежит поверх графики */}
+          <rect
+            className="Strip-line"
+            x={x - LINE_W / 2}
+            y={0}
+            width={LINE_W}
+            height={STRIP_H}
+          />
 
           <path
             className="Strip-pointer"
