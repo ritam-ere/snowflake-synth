@@ -1,0 +1,74 @@
+.Strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 156px;
+  user-select: none;
+}
+
+.Strip-body {
+  width: 156px;
+  height: 25px;
+  border-radius: var(--radius-small);
+  cursor: ew-resize;
+  /* Тач: жест перетаскивания не прокручивает страницу */
+  touch-action: none;
+  outline: none;
+}
+
+.Strip.is-keyboard .Strip-body:focus {
+  box-shadow: 0 0 0 2px var(--white-20);
+}
+
+.Strip svg {
+  display: block;
+  overflow: visible;
+}
+
+.Strip-track {
+  fill: var(--white-4);
+}
+
+.Strip-waveLine {
+  fill: none;
+  stroke: var(--white-60);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.Strip-brick {
+  fill: var(--white-60);
+}
+
+.Strip-line,
+.Strip-pointer {
+  fill: var(--white-100);
+}
+
+.Strip-pointer {
+  /* Обводка цвета фона под полоской отделяет бегунок */
+  stroke: var(--strip-outline, #1e1e1e);
+}
+
+/* Tone: градиент от самого бледного к самому яркому */
+.Strip-gradient .Strip-body {
+  background: linear-gradient(90deg, var(--white-4), var(--white-100));
+}
+
+/* Громкость голоса: градиент поверх цвета голоса */
+.Strip-volume .Strip-body {
+  background: linear-gradient(90deg, var(--white-10), var(--white-100));
+}
+
+.Strip-gradient .Strip-track,
+.Strip-volume .Strip-track {
+  fill: none;
+}
+
+.Strip-label {
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}

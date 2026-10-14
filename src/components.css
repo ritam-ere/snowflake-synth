@@ -5,6 +5,7 @@
 
 @import 'components/Knob/Knob.css';
 @import 'components/Steps/Steps.css';
+@import 'components/Strip/Strip.css';
 
 /* Витрина контролов (как elements-react в synth-controls) */
 .Showcase {
@@ -60,4 +61,30 @@
 .Showcase .value {
   color: var(--white-60);
   font-variant-numeric: tabular-nums;
+}
+
+/* У полосок бегунок выступает над полоской */
+.Showcase .strip-card {
+  gap: 24px;
+}
+
+/* Громкость живёт на плашке голоса: фон и обводка бегунка в цвете голоса */
+.Showcase .voice-card .card-title,
+.Showcase .voice-card .value {
+  color: var(--white-100);
+}
+
+.Showcase .voice-lead {
+  --strip-outline: var(--voice-lead);
+  background: var(--voice-lead);
+}
+
+.Showcase .voice-bass {
+  --strip-outline: var(--voice-bass);
+  background: var(--voice-bass);
+}
+
+.Showcase .voice-extra {
+  --strip-outline: var(--voice-extra);
+  background: var(--voice-extra);
 }
