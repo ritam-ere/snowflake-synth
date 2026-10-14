@@ -16,7 +16,9 @@ import useNodeDrag from './useNodeDrag.js'
 // свёрнутой). Карточка Add Effect — в конце колонки, куда ляжет
 // следующая нода, клик по ней открывает выбор эффектов.
 // Ноды можно переставлять, потянув за бейдж (useNodeDrag).
-// Кнопки Edit и Export внизу справа пока неактивны
+// Edit (или F) — режим редактирования: у нод кнопки выбора, внизу
+// Reset All (убрать все эффекты) и Delete (удалить выбранные).
+// Export пока неактивна
 export default function NodeSpace({ state, drag, dispatch, handleChange }) {
   const focusVoice = state.ui.openVoice
   const addCard = useRef(null)
@@ -26,6 +28,7 @@ export default function NodeSpace({ state, drag, dispatch, handleChange }) {
   const addColumn = nextColumnIndex(state)
   const columnsRef = useRef(null)
   const { dragging, startNodeDrag } = useNodeDrag(state, dispatch, columnsRef)
+  const { editing, selected } = state.ui
 
   return (
     <section className="NodeSpace" aria-label="Effects">
@@ -40,6 +43,11 @@ export default function NodeSpace({ state, drag, dispatch, handleChange }) {
                 linkTarget={drag?.target === nodeId ? drag.voice : null}
                 focusVoice={focusVoice}
                 dragging={dragging === nodeId}
+                editing={editing}
+                selected={selected.includes(nodeId)}
+                handleSelect={(id) =>
+                  dispatch({ type: 'TOGGLE_SELECTED', nodeId: id })
+                }
                 handleDragStart={startNodeDrag}
                 handleUnlink={(voice, id) =>
                   dispatch({ type: 'UNLINK', voice, nodeId: id })
@@ -72,7 +80,25 @@ export default function NodeSpace({ state, drag, dispatch, handleChange }) {
       )}
 
       <div className="NodeSpace-buttons">
-        <Button text="Edit" hotkey="F" />
+        {editing && (
+          <>
+            <Button
+              text="Reset All"
+              handleClick={() => dispatch({ type: 'RESET_NODES' })}
+            />
+            <Button
+              text={selected.length ? `Delete ${selected.length}` : 'Delete'}
+              faint={selected.length === 0}
+              handleClick={() => dispatch({ type: 'DELETE_SELECTED' })}
+            />
+          </>
+        )}
+        <Button
+          text="Edit"
+          hotkey="F"
+          active={editing}
+          handleClick={() => dispatch({ type: 'SET_EDITING', on: !editing })}
+        />
         <Button icon="export" label="Export" />
       </div>
     </section>

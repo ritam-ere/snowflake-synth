@@ -188,3 +188,98 @@ body.is-moving-node * {
   cursor: grabbing !important;
   user-select: none;
 }
+
+/* ---------- Режим Edit ---------- */
+
+.Fx.is-editing {
+  cursor: pointer;
+  user-select: none;
+}
+
+.Fx.is-selected {
+  box-shadow: 0 0 0 2px var(--white-60);
+}
+
+/* Наведённая нода дрожит, как иконки в iOS */
+@keyframes fx-jiggle {
+  0% {
+    transform: rotate(-0.7deg) translateY(0);
+  }
+
+  50% {
+    transform: rotate(0.7deg) translateY(-0.5px);
+  }
+
+  100% {
+    transform: rotate(-0.7deg) translateY(0);
+  }
+}
+
+.Fx.is-editing:hover {
+  animation: fx-jiggle 240ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .Fx.is-editing:hover {
+    animation: none;
+  }
+}
+
+.Fx-ghost {
+  animation: none !important;
+}
+
+/* Кнопка выбора — круг в правом верхнем углу, как лампочки слева,
+   с кольцом 4px цвета фона, как у «×» связи. Пустой круг с обводкой —
+   не выбрана, белый с галочкой — выбрана (как мультиселект в iOS) */
+.Fx-select {
+  position: absolute;
+  top: -11px;
+  right: -11px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: var(--background);
+  border: 4px solid var(--background);
+  border-radius: var(--radius-dot);
+  box-shadow: inset 0 0 0 2px var(--white-60);
+  box-sizing: content-box;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background 100ms linear,
+    box-shadow 100ms linear;
+}
+
+.Fx-select:hover {
+  box-shadow: inset 0 0 0 2px var(--white-100);
+}
+
+.Fx-select:focus-visible {
+  outline: 2px solid var(--white-60);
+  outline-offset: 2px;
+}
+
+.Fx-select[aria-pressed='true'] {
+  background: var(--white-100);
+  box-shadow: none;
+}
+
+/* Галочка у выбранной ноды */
+.Fx-check {
+  width: 6px;
+  height: 11px;
+  margin-top: -3px;
+  border-right: 2.5px solid var(--background);
+  border-bottom: 2.5px solid var(--background);
+  opacity: 0;
+  transform: rotate(45deg);
+}
+
+.Fx-select[aria-pressed='true'] .Fx-check {
+  opacity: 1;
+}

@@ -533,3 +533,73 @@ describe('Общие правила', () => {
     ).not.toThrow()
   })
 })
+
+describe('режим редактирования', () => {
+  test('Edit включается и выключается, при выходе выбор сбрасывается', () => {
+    let s = run(
+      createInitialState(),
+      { type: 'SET_EDITING', on: true },
+      { type: 'TOGGLE_SELECTED', nodeId: 'n2' }
+    )
+    expect(s.ui.editing).toBe(true)
+    expect(s.ui.selected).toEqual(['n2'])
+
+    s = reducer(s, { type: 'SET_EDITING', on: false })
+    expect(s.ui.editing).toBe(false)
+    expect(s.ui.selected).toEqual([])
+  })
+
+  test('выбирать можно только в режиме Edit, повторный клик снимает выбор', () => {
+    const init = createInitialState()
+    expect(reducer(init, { type: 'TOGGLE_SELECTED', nodeId: 'n1' })).toBe(init)
+
+    const s = run(
+      init,
+      { type: 'SET_EDITING', on: true },
+      { type: 'TOGGLE_SELECTED', nodeId: 'n1' },
+      { type: 'TOGGLE_SELECTED', nodeId: 'n3' },
+      { type: 'TOGGLE_SELECTED', nodeId: 'n1' },
+      { type: 'TOGGLE_SELECTED', nodeId: 'nope' }
+    )
+    expect(s.ui.selected).toEqual(['n3'])
+  })
+
+  test('Delete удаляет выбранные ноды вместе со связями и местами в колонках', () => {
+    const s = run(
+      createInitialState(),
+      { type: 'SET_EDITING', on: true },
+      { type: 'TOGGLE_SELECTED', nodeId: 'n1' },
+      { type: 'TOGGLE_SELECTED', nodeId: 'n3' },
+      { type: 'DELETE_SELECTED' }
+    )
+    expect(Object.keys(s.nodes)).toEqual(['n2', 'n4'])
+    expect(s.links.some((l) => l.node === 'n1' || l.node === 'n3')).toBe(false)
+    expect(s.layout.columns.flat()).toEqual(['n2', 'n4'])
+    expect(s.ui.selected).toEqual([])
+    expect(s.ui.editing).toBe(true)
+  })
+
+  test('Delete без выбора ничего не меняет', () => {
+    const s = reducer(createInitialState(), { type: 'SET_EDITING', on: true })
+    expect(reducer(s, { type: 'DELETE_SELECTED' })).toBe(s)
+  })
+
+  test('Reset All: ни одного эффекта, голоса не тронуты, новые ноды — с первой колонки', () => {
+    const init = run(createInitialState(), {
+      type: 'CHANGE',
+      property: ['voices', 'lead', 'volume'],
+      value: 40
+    })
+    let s = reducer(init, { type: 'RESET_NODES' })
+    expect(nodeCount(s)).toBe(0)
+    expect(s.links).toEqual([])
+    expect(s.layout.columns.flat()).toEqual([])
+    expect(s.voices).toEqual(init.voices)
+    expect(nextColumnIndex(s)).toBe(0)
+
+    s = reducer(s, { type: 'ADD_NODES', types: ['chorus'] })
+    expect(s.layout.columns[0]).toHaveLength(1)
+    // id не повторяются: сид узора у новой ноды свой
+    expect(Object.keys(s.nodes)[0]).toBe('n5')
+  })
+})

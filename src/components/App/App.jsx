@@ -65,6 +65,33 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleEscape)
   }, [openVoice])
 
+  // Режим редактирования с клавиатуры: F — войти / выйти, Esc — выйти,
+  // Delete / Backspace — удалить выбранные ноды
+  const editing = state.ui.editing
+  useEffect(() => {
+    function handleEditKeys(event) {
+      if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return
+      const typing = event.target.closest?.(
+        'input, textarea, select, [contenteditable], [role="listbox"]'
+      )
+      if (typing) return
+
+      if (event.code === 'KeyF') {
+        dispatch({ type: 'SET_EDITING', on: !editing })
+      } else if (editing && event.key === 'Escape') {
+        dispatch({ type: 'SET_EDITING', on: false })
+      } else if (
+        editing &&
+        (event.key === 'Delete' || event.key === 'Backspace')
+      ) {
+        event.preventDefault()
+        dispatch({ type: 'DELETE_SELECTED' })
+      }
+    }
+    window.addEventListener('keydown', handleEditKeys)
+    return () => window.removeEventListener('keydown', handleEditKeys)
+  }, [editing])
+
   // Вызывается прямо в обработчике жеста: Tone.start() внутри
   // должен успеть выполниться, пока жест «свежий» (важно для Safari)
   const started = useRef(false)
