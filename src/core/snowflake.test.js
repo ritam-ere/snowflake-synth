@@ -21,14 +21,15 @@ import { createInitialState, reducer } from './state.js'
 const apply = (state, ...actions) => actions.reduce(reducer, state)
 
 describe('клин и зоны', () => {
-  test('сектор 30°: ширина у края = L·tan30°', () => {
-    expect(WIDTH).toBeCloseTo(L * Math.tan(Math.PI / 6))
+  test('клин из макета: 205 × 576, угол при вершине ≈ 19,6°', () => {
+    expect(WIDTH).toBe(205)
+    expect(L).toBe(576)
     expect(inWedge(0, L)).toBe(true)
     expect(inWedge(WIDTH + 1, L)).toBe(false)
   })
 
   test('расстояние до левого сгиба: на сгибе 0, на хребте максимально', () => {
-    expect(distanceToFold(L * Math.tan(Math.PI / 6), L)).toBeCloseTo(0)
+    expect(distanceToFold(WIDTH, L)).toBeCloseTo(0)
     expect(distanceToFold(0, 100)).toBeGreaterThan(distanceToFold(20, 100))
   })
 
@@ -36,7 +37,7 @@ describe('клин и зоны', () => {
     expect(inCenter(SPINE, 200)).toBe(false)
     expect(inCenter(60, APEX)).toBe(false)
     expect(inCenter(60, L - EDGE_DEPTH)).toBe(false)
-    expect(inCenter(60, 200)).toBe(true)
+    expect(inCenter(30, 400)).toBe(true)
   })
 })
 
@@ -66,10 +67,10 @@ describe('слоты', () => {
   })
 
   test('выемки сгиба не доходят до вершины и до зоны края', () => {
-    const cos30 = Math.cos(Math.PI / 6)
+    const cos = Math.cos(Math.atan(WIDTH / L))
     SLOT_GEOMETRY.folds.forEach((s) => {
-      expect(s.from * cos30).toBeGreaterThan(APEX)
-      expect(s.to * cos30).toBeLessThan(L - EDGE_DEPTH)
+      expect(s.from * cos).toBeGreaterThan(APEX)
+      expect(s.to * cos).toBeLessThan(L - EDGE_DEPTH)
     })
   })
 })
@@ -134,19 +135,30 @@ describe('узор', () => {
 })
 
 describe('разворот', () => {
-  test('12 копий покрывают круг без пропусков и наложений', () => {
-    const sectors = Array.from({ length: 12 }, (_, k) => unfoldSector(k))
-      .map(([a, b]) => [((a % 360) + 360) % 360, b])
-      .sort((p, q) => p[0] - q[0])
-    sectors.forEach(([a, b], i) => {
-      expect(b - a === 30 || b - a === -330).toBe(true)
-      if (i > 0) expect(a).toBe((sectors[i - 1][0] + 30) % 360)
+  test('пары копий сходятся хребтами в 6 лучей через 60°', () => {
+    for (let pair = 0; pair < 6; pair++) {
+      const even = unfoldSector(2 * pair)
+      const odd = unfoldSector(2 * pair + 1)
+      // хребты (правые кромки) обеих копий пары на одной линии
+      expect(even[1]).toBe(odd[0])
+      expect(even[1]).toBe(60 * pair)
+    }
+  })
+
+  test('лучи не накладываются друг на друга', () => {
+    const rays = Array.from({ length: 6 }, (_, i) => [
+      unfoldSector(2 * i)[0],
+      unfoldSector(2 * i + 1)[1]
+    ])
+    rays.forEach(([a, b], i) => {
+      expect(b - a).toBeLessThan(60)
+      if (i > 0) expect(a).toBeGreaterThan(rays[i - 1][1])
     })
-    expect(unfoldTransforms().length).toBe(12)
   })
 
   test('каждая вторая копия отражена', () => {
     const t = unfoldTransforms()
+    expect(t.length).toBe(12)
     expect(t.filter((s) => s.includes('scale(-1 1)')).length).toBe(6)
     expect(t[0]).toBe('rotate(0)')
   })

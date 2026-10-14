@@ -1,8 +1,15 @@
 import React from 'react'
 
-import { L, WIDTH, snowflakePattern } from '../../core/snowflake.js'
+import {
+  ANGLE,
+  COS,
+  L,
+  SIN,
+  WIDTH,
+  snowflakePattern
+} from '../../core/snowflake.js'
 
-// Сложенный клин снежинки в панели (задача 6.1). Геометрия и узор —
+// Сложенный клин снежинки в панели (задача 6.1), форма — из макета. Геометрия и узор —
 // чистые функции из core/snowflake.js; здесь только рисование.
 // Вырезы пока простые заглушки (круг, выемка, полукруг), размер — по Mix;
 // мотивы каждого эффекта по таблице раздела 9 — задача 6.2.
@@ -10,24 +17,41 @@ import { L, WIDTH, snowflakePattern } from '../../core/snowflake.js'
 // Координаты клина: x — от хребта влево, y — от вершины вверх.
 // В SVG вершина внизу, хребет справа, как в макете.
 
-const TAN15 = Math.tan(Math.PI / 12)
-const COS30 = Math.cos(Math.PI / 6)
-const SIN30 = 0.5
+const TAN_HALF = Math.tan(ANGLE / 2)
 
 const toSvg = (x, y) => [WIDTH - x, L - y]
 
-// Клин со скруглённым кончиком
+// Клин со слегка скруглёнными углами: кончик (вершина) и два угла края.
+// Скругление — квадратичной кривой через угол
+const ROUND_TIP = 10
+const ROUND_CORNER = 6
+
 const WEDGE = (() => {
-  const [ax, ay] = toSvg(0, 0)
-  const tip = 10
-  const [lx, ly] = toSvg(tip * SIN30, tip * COS30)
-  return `M 0 0 H ${WIDTH} V ${ay - tip} Q ${ax} ${ay} ${lx} ${ly} Z`
+  // углы клина в SVG: левый верхний, правый верхний, кончик внизу справа
+  const [lx, ly] = [0, 0]
+  const [rx, ry] = [WIDTH, 0]
+  const [tx, ty] = toSvg(0, 0)
+  // единичный вектор вдоль гипотенузы (от левого верхнего к кончику)
+  const ux = SIN
+  const uy = COS
+  const c = ROUND_CORNER
+  const t = ROUND_TIP
+  return [
+    `M ${lx + c} ${ly}`,
+    `H ${rx - c}`,
+    `Q ${rx} ${ry} ${rx} ${ry + c}`,
+    `V ${ty - t}`,
+    `Q ${tx} ${ty} ${tx - t * ux} ${ty - t * uy}`,
+    `L ${lx + c * ux} ${ly + c * uy}`,
+    `Q ${lx} ${ly} ${lx + c} ${ly}`,
+    'Z'
+  ].join(' ')
 })()
 
 // Линия сгиба по биссектрисе клина
 const CREASE = (() => {
   const [x0, y0] = toSvg(0, 14)
-  const [x1, y1] = toSvg(L * TAN15, L)
+  const [x1, y1] = toSvg(L * TAN_HALF, L)
   return `M ${x0} ${y0} L ${x1} ${y1}`
 })()
 
@@ -51,7 +75,7 @@ function Cut({ cut }) {
 
   // folds: полукруглая выемка на левом сгибе
   const middle = (slot.from + slot.to) / 2
-  const [cx, cy] = toSvg(middle * SIN30, middle * COS30)
+  const [cx, cy] = toSvg(middle * SIN, middle * COS)
   return <circle cx={cx} cy={cy} r={slot.depth * amount} />
 }
 

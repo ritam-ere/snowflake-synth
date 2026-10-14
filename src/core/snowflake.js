@@ -1,9 +1,11 @@
 // Геометрия снежинки (раздел 6 ТЗ, задача 6.1). Чистые функции без
 // DOM и без Math.random: одинаковое состояние → одинаковый узор.
 //
-// Клин — 1/12 снежинки: сектор 30° от вершины (центр снежинки) вверх.
+// Клин — форма из макета (заглушка Starter): вытянутый прямоугольный
+// треугольник 205 × 576, угол при вершине ≈ 19,6°. Вершина — центр
+// снежинки. Короткий катет сверху — внешний край, «обрамление» снежинки.
 // Координаты клина (в «бумажных» единицах):
-//   x — от хребта влево (0 … y·tan30°), y — от вершины вверх (0 … L).
+//   x — от хребта влево (0 … y·tg α), y — от вершины вверх (0 … L).
 //   Правая кромка x = 0 — сгиб с «хребтом»: его не режут, поэтому
 //   развёрнутая снежинка не распадается. Левая кромка — второй сгиб.
 //
@@ -17,16 +19,18 @@
 import { EFFECTS } from './effects.js'
 import { voicesOfNode } from './state.js'
 
-export const L = 480 // длина клина от вершины до края
-export const TAN30 = Math.tan(Math.PI / 6)
-export const COS30 = Math.cos(Math.PI / 6)
-export const WIDTH = L * TAN30 // ширина клина у края ≈ 277
+export const L = 576 // длина клина от вершины до края
+export const WIDTH = 205 // ширина у края — короткий катет
+export const TAN = WIDTH / L
+export const ANGLE = Math.atan(TAN) // ≈ 19,6°
+export const COS = Math.cos(ANGLE)
+export const SIN = Math.sin(ANGLE)
 
 export const SPINE = 8 // хребет вдоль правого сгиба
 export const MARGIN = 8 // перемычки между зонами
 export const APEX = 40 // нетронутая вершина
 export const EDGE_DEPTH = 56 // глубина зоны края
-export const FOLD_DEPTH = 30 // глубина зоны сгиба (поперёк сгиба)
+export const FOLD_DEPTH = 24 // глубина зоны сгиба (поперёк сгиба)
 
 export const SLOTS = 12 // максимум нод — по 12 слотов в каждой зоне
 
@@ -34,12 +38,12 @@ export const SLOTS = 12 // максимум нод — по 12 слотов в �
 
 // Ширина клина на высоте y
 export function widthAt(y) {
-  return y * TAN30
+  return y * TAN
 }
 
 // Расстояние от точки до левого сгиба (по перпендикуляру)
 export function distanceToFold(x, y) {
-  return (y * TAN30 - x) * COS30
+  return (y * TAN - x) * COS
 }
 
 export function inWedge(x, y) {
@@ -119,7 +123,7 @@ const SEGMENT_ORDER = [1, 3, 5, 0, 2, 4]
 // слоты 6–11 — те же места со сдвигом на полсегмента
 function edgeSlots() {
   const x0 = SPINE + MARGIN
-  const x1 = WIDTH - FOLD_DEPTH / COS30 - MARGIN
+  const x1 = WIDTH - FOLD_DEPTH / COS - MARGIN
   const size = (x1 - x0) / 6
 
   return Array.from({ length: SLOTS }, (_, k) => {
@@ -132,8 +136,8 @@ function edgeSlots() {
 // Сгиб: левая кромка от вершины до зоны края, 6 сегментов вдоль неё
 // (расстояние по сгибу от вершины); слоты 6–11 — со сдвигом
 function foldSlots() {
-  const s0 = (APEX + MARGIN) / COS30
-  const s1 = (L - EDGE_DEPTH - MARGIN) / COS30
+  const s0 = (APEX + MARGIN) / COS
+  const s1 = (L - EDGE_DEPTH - MARGIN) / COS
   const size = (s1 - s0) / 6
 
   return Array.from({ length: SLOTS }, (_, k) => {
@@ -187,17 +191,19 @@ export function snowflakePattern(state) {
 // ---------- Разворот ----------
 
 // 12 копий клина вокруг центра снежинки. Клин в SVG рисуется вершиной
-// в начале координат и уходит вверх-влево (сектор от −30° до 0° от
-// вертикали). Чётные копии повёрнуты на 30°·k, нечётные отражены
-// по хребту и повёрнуты на 30°·(k−1): соседние копии сходятся
-// одинаковыми кромками — хребет к хребту, сгиб к сгибу
+// в начале координат и уходит вверх-влево (от −α до 0 от вертикали).
+// Чётная копия k повёрнута на 30°·k, нечётная отражена по хребту и
+// повёрнута на 30°·(k−1): пары копий сходятся хребтами в луч шириной
+// 2α ≈ 39°, шесть лучей через 60°. Между лучами — просветы, лучи
+// держатся за общую серединку (её добавляет разворот, задача 6.5)
 export function unfoldTransforms() {
   return Array.from({ length: 12 }, (_, k) =>
     k % 2 === 0 ? `rotate(${30 * k})` : `rotate(${30 * (k - 1)}) scale(-1 1)`
   )
 }
 
-// Сектор, который занимает копия k (градусы по часовой от вертикали)
+// Сектор копии k в градусах по часовой от вертикали
 export function unfoldSector(k) {
-  return k % 2 === 0 ? [30 * k - 30, 30 * k] : [30 * (k - 1), 30 * k]
+  const a = (ANGLE * 180) / Math.PI
+  return k % 2 === 0 ? [30 * k - a, 30 * k] : [30 * (k - 1), 30 * (k - 1) + a]
 }
