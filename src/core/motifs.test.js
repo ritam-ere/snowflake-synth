@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { EFFECTS, EFFECT_TYPES } from './effects.js'
-import { geometry } from './motifs/geometry.js'
-import { motif } from './motifs/index.js'
+import { motif } from './motifs.js'
 import { snowflakePattern } from './snowflake.js'
 import { createInitialState, reducer } from './state.js'
 
@@ -36,47 +35,26 @@ function extremes(spec) {
   ]
 }
 
-// Итоговый узор (Frost) и узоры прошлой итерации (Geometry) —
-// для каждого: каждый параметр меняет вырез, результат детерминирован
-const LIBRARIES = {
-  frost: motif,
-  geometry: (cut) => geometry[cut.type](cut)
-}
-
-for (const [name, draw] of Object.entries(LIBRARIES)) {
-  describe(`мотивы вырезов: ${name}`, () => {
-    for (const type of EFFECT_TYPES) {
-      test(`${type}: есть фигуры, результат детерминирован`, () => {
-        const cut = cutOf(type)
-        const shapes = draw(cut)
-        expect(shapes.length).toBeGreaterThan(1)
-        expect(draw(cut)).toEqual(shapes)
-      })
-
-      for (const [param, spec] of Object.entries(EFFECTS[type].params)) {
-        test(`${type}: ${param} меняет вырез`, () => {
-          const [low, high] = extremes(spec)
-          // для delay Time заметен только при нескольких повторах
-          const base = type === 'delay' ? { feedback: 1 } : {}
-          const a = draw(cutOf(type, { ...base, [param]: low }))
-          const b = draw(cutOf(type, { ...base, [param]: high }))
-          expect(a).not.toEqual(b)
-        })
-      }
-    }
-
-    test('ажур: вырез открывает область, дальше только бумага', () => {
-      for (const type of EFFECT_TYPES) {
-        const shapes = draw(cutOf(type))
-        expect(shapes[0].paper).toBeUndefined()
-        expect(shapes.slice(1).every((s) => s.paper)).toBe(true)
-      }
+describe('мотивы вырезов', () => {
+  for (const type of EFFECT_TYPES) {
+    test(`${type}: есть фигуры, результат детерминирован`, () => {
+      const cut = cutOf(type)
+      const shapes = motif(cut)
+      expect(shapes.length).toBeGreaterThan(0)
+      expect(motif(cut)).toEqual(shapes)
     })
-  })
-}
 
-describe('узоры прошлой итерации и Frost', () => {
-  const geo = LIBRARIES.geometry
+    for (const [param, spec] of Object.entries(EFFECTS[type].params)) {
+      test(`${type}: ${param} меняет вырез`, () => {
+        const [low, high] = extremes(spec)
+        // для delay Time заметен только при нескольких повторах
+        const base = type === 'delay' ? { feedback: 1 } : {}
+        const a = motif(cutOf(type, { ...base, [param]: low }))
+        const b = motif(cutOf(type, { ...base, [param]: high }))
+        expect(a).not.toEqual(b)
+      })
+    }
+  }
 
   test('pitchShift: −12 / +7 / +12 — звезда в 4 / 5 / 6 лучей', () => {
     for (const [interval, rays] of [
@@ -84,36 +62,28 @@ describe('узоры прошлой итерации и Frost', () => {
       [7, 5],
       [12, 6]
     ]) {
-      const star = geo(cutOf('pitchShift', { interval }))[2]
+      const star = motif(cutOf('pitchShift', { interval }))[2]
       expect(star.d.split('L').length).toBe(rays * 2 + 1)
     }
   })
 
   test('reverb: чем дольше Decay, тем больше колец', () => {
     const rings = (decay) =>
-      geo(cutOf('reverb', { decay })).filter((s) => s.shape === 'circle')
+      motif(cutOf('reverb', { decay })).filter((s) => s.shape === 'circle')
     expect(rings(0).length).toBe(1)
     expect(rings(1).length).toBeGreaterThan(3)
   })
 
-  test('Frost: Delay — лесенка уголков из прошлой итерации', () => {
-    const cut = cutOf('delay')
-    expect(motif(cut)).toEqual(geo(cut))
-  })
-
-  test('Frost: Pitch Shift — кристалл с 4 / 5 / 6 лучами', () => {
-    // вырез + шестиугольник, у каждого луча — сам луч и 4 колючки
-    for (const [interval, rays] of [
-      [-12, 4],
-      [7, 5],
-      [12, 6]
-    ]) {
-      expect(motif(cutOf('pitchShift', { interval })).length).toBe(2 + 5 * rays)
+  test('ажур: вырез открывает область, бумажный узор остаётся', () => {
+    for (const type of EFFECT_TYPES) {
+      const shapes = motif(cutOf(type))
+      expect(shapes[0].paper).toBeUndefined()
+      expect(shapes.slice(1).every((s) => s.paper && s.stroke > 0)).toBe(true)
     }
   })
 
   test('Mix делает узор тоньше', () => {
-    const width = (mix) => geo(cutOf('reverb', { mix }))[1].stroke
+    const width = (mix) => motif(cutOf('reverb', { mix }))[1].stroke
     expect(width(1)).toBeLessThan(width(0.1))
   })
 })

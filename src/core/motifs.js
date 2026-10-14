@@ -1,26 +1,73 @@
-// Стиль «Геометрия» (задача 6.2): кольца, лесенки, спицы, зубцы,
-// ушки, бахрома. Вырез почти целиком открывает свою область, а внутри
-// остаётся тонкий бумажный узор. Каждый параметр меняет свой узор.
+// Мотивы вырезов (раздел 9 ТЗ, задача 6.2): ажур, как у бумажной
+// снежинки. Вырез почти целиком открывает свою область, а внутри
+// остаётся тонкий бумажный узор — кольца, лесенки, спицы, зубцы, ушки,
+// бахрома. Каждый параметр эффекта меняет свой узор по таблице.
+//
+// Чистые функции: вырез + его область → список фигур в координатах
+// клина (x — от хребта влево, y — от вершины вверх).
+//
+// Фигуры:
+//   { shape: 'path', d }                     — вырез (заливка пустотой);
+//   { shape: 'path', d, stroke, paper }      — бумажная линия толщиной stroke;
+//   { shape: 'circle', cx, cy, r, stroke, paper } — бумажное кольцо.
+// join: 'miter' — острые углы линии (по умолчанию скруглённые).
 //
 // Связность: каждая бумажная линия доходит до границы своей области —
 // там начинается целая бумага перемычек, хребта и кромки. Мотив
 // обрезается по области, поэтому зоны не нарушаются и бумага
 // не распадается на отдельные кусочки.
 
-import { EDGE_DEPTH, L, centerLimit, foldPoint } from '../snowflake.js'
-import {
-  TIME_RISE,
-  WAVES,
-  across,
-  f,
-  foldHole,
-  hole,
-  lace,
-  noise,
-  norm,
-  paper,
-  posts
-} from './common.js'
+import { EFFECTS } from './effects.js'
+import { toNormal } from './scale.js'
+import { EDGE_DEPTH, L, centerLimit, foldPoint } from './snowflake.js'
+
+// Параметр ноды → 0…1 по его диапазону (частоты — по логарифму)
+function norm(cut, param) {
+  const spec = EFFECTS[cut.type].params[param]
+  return toNormal(cut.settings[param], spec)
+}
+
+// Детерминированное «случайное» число из сида выреза и номера
+function noise(seed, i) {
+  const x = Math.sin(seed * 9301 + i * 49.297) * 233280
+  return x - Math.floor(x)
+}
+
+const f = (n) => Math.round(n * 100) / 100
+
+function polyline(points, closed = false) {
+  const d = points.map(([x, y], i) => `${i ? 'L' : 'M'} ${f(x)} ${f(y)}`)
+  return d.join(' ') + (closed ? ' Z' : '')
+}
+
+// Толщина бумажного узора: чем больше Mix, тем ажурнее (тоньше)
+function lace(cut) {
+  return 7 - 3.5 * norm(cut, 'mix')
+}
+
+// Вырез всей области — дальше в него «возвращается» бумажный узор
+function hole(polygon) {
+  return { shape: 'path', d: polyline(polygon, true) }
+}
+
+function paper(points, stroke, extra = {}) {
+  return {
+    shape: 'path',
+    d: polyline(points),
+    stroke: f(stroke),
+    paper: true,
+    ...extra
+  }
+}
+
+// ---------- Середина: полоса между хребтом и зоной сгиба ----------
+
+// Середина полосы на высоте y и её полуширина
+function across(region, y) {
+  const right = region.x0
+  const left = centerLimit(y)
+  return { x: (right + left) / 2, half: (left - right) / 2 }
+}
 
 // Reverb: веточка с кольцами-отражениями. Decay — число колец (1–7),
 // они мельчают от края к центру, как затухающий хвост; Mix — ажурность
@@ -70,6 +117,9 @@ function reverb(cut) {
   }
   return shapes
 }
+
+// Time L / R → крутизна левого / правого плеча уголка
+const TIME_RISE = { '8n': 0.3, '4n': 0.6, '2n': 0.9 }
 
 // Delay: лесенка уголков-повторов. Feedback — число уголков (1–6);
 // Time L / R — высота левого / правого плеча; Ping-Pong — вершины
@@ -148,6 +198,29 @@ function pitchShift(cut) {
 
 // ---------- Край: силуэт и кружево под ним ----------
 
+const WAVES = {
+  sine: (t) => (1 - Math.cos(2 * Math.PI * t)) / 2,
+  triangle: (t) => 1 - Math.abs(2 * (t - Math.floor(t)) - 1),
+  // «ступенька» со скошенными боками — без вертикальных стенок
+  square: (t) => {
+    const p = t - Math.floor(t)
+    return Math.min(1, Math.max(0, Math.min(p, 1 - p) * 6 - 0.6))
+  }
+}
+
+// Столбики от линии края вниз, до перемычки над серединой
+function posts(xs, line, region, w) {
+  return xs.map((x) =>
+    paper(
+      [
+        [x, line(x)],
+        [x, region.y0 - 10]
+      ],
+      w
+    )
+  )
+}
+
 // Chorus: волнистая кромка на столбиках. Depth — высота волны,
 // Rate — число волн, Wave — округлая / треугольная / ступенчатая;
 // Mix — ажурность. Над волной — пустота (новый силуэт), под ней — окна
@@ -203,6 +276,16 @@ function distortion(cut) {
 }
 
 // ---------- Сгиб: выемки в боковой кромке луча ----------
+
+// Часть полосы сгиба от s0 до s1 (вырез целиком до кромки клина)
+function foldHole(s0, s1, depth) {
+  return hole([
+    foldPoint(s0, -20),
+    foldPoint(s1, -20),
+    foldPoint(s1, depth),
+    foldPoint(s0, depth)
+  ])
+}
 
 // Phaser: ушки-полумесяцы вдоль кромки. Freq — число ушек (1–5),
 // Oct — разброс размеров, Mix — ажурность
@@ -268,7 +351,7 @@ function vibrato(cut) {
   return shapes
 }
 
-export const geometry = {
+const MOTIFS = {
   reverb,
   delay,
   pitchShift,
@@ -276,4 +359,8 @@ export const geometry = {
   distortion,
   phaser,
   vibrato
+}
+
+export function motif(cut) {
+  return MOTIFS[cut.type](cut)
 }
