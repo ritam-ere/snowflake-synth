@@ -34,7 +34,3 @@
 .SnowflakePanel.is-closed .SnowflakePanel-wedge {
   opacity: 0;
 }
-
-.SnowflakePanel-wedge path {
-  fill: var(--white-4);
-}

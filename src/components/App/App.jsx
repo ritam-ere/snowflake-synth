@@ -108,6 +108,7 @@ export default function App() {
   return (
     <main className="App">
       <SnowflakePanel
+        state={state}
         open={panelOpen}
         handleToggle={() => dispatch({ type: 'SET_PANEL', open: !panelOpen })}
       />
