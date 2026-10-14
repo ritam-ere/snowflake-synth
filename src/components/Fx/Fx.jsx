@@ -12,6 +12,8 @@ export default function Fx({
   nodeId,
   linkTarget,
   focusVoice,
+  dragging = false,
+  handleDragStart,
   handleChange,
   handleUnlink
 }) {
@@ -23,6 +25,7 @@ export default function Fx({
   const classes = ['Fx', `Fx-${node.type}`]
   // Режим связей: открыта плашка голоса — ноды без него затемнены
   if (focusVoice && !voices.includes(focusVoice)) classes.push('is-dimmed')
+  if (dragging) classes.push('is-placeholder')
   if (linkTarget) {
     classes.push('is-link-target', `is-link-${linkTarget}`)
     if (voices.includes(linkTarget)) classes.push('is-linked-already')
@@ -35,7 +38,13 @@ export default function Fx({
       style={{ height: spec.height }}
       aria-label={spec.label}
     >
-      <span className="Fx-badge text-small">{spec.label}</span>
+      <span
+        className="Fx-badge text-small"
+        title="Drag to move"
+        onPointerDown={(event) => handleDragStart?.(nodeId, event)}
+      >
+        {spec.label}
+      </span>
 
       {voices.length > 0 && (
         <span className="Fx-dots">
