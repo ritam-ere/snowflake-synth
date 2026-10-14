@@ -1,0 +1,30 @@
+.Fx {
+  position: relative;
+  flex: none;
+  width: 100%;
+  background: var(--white-4);
+  border-radius: var(--radius-card);
+}
+
+/* Бейдж: по центру над верхним краем */
+.Fx-badge {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  padding: 4px 2px;
+  background: var(--badge);
+  border-radius: var(--radius-small);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* Лампочки: точки 10px через 12px; у точки кольцо 4px снаружи,
+   поэтому коробки 18px идут через 4px и сдвинуты на кольцо */
+.Fx-dots {
+  position: absolute;
+  top: 12px;
+  left: -9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

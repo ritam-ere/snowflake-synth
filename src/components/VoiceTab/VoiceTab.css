@@ -1,0 +1,40 @@
+.VoiceTab {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  height: var(--voice-height);
+  padding: var(--voice-padding-top) 20px var(--voice-padding-bottom);
+  background: var(--voice-color);
+  border: var(--border);
+  border-radius: var(--radius-card);
+}
+
+.VoiceTab-lead {
+  --voice-color: var(--voice-lead);
+}
+
+.VoiceTab-bass {
+  --voice-color: var(--voice-bass);
+}
+
+.VoiceTab-extra {
+  --voice-color: var(--voice-extra);
+}
+
+.VoiceTab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Точка сидит на нижнем крае плашки */
+.VoiceTab-dot {
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  display: flex;
+  transform: translateX(-50%);
+}

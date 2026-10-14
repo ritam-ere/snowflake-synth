@@ -1,0 +1,32 @@
+.SnowflakePanel {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--panel-open-width);
+  padding: 12px;
+  background: var(--white-2);
+  border: var(--border);
+  border-radius: var(--radius-card);
+}
+
+.SnowflakePanel.is-closed {
+  width: var(--panel-closed-width);
+}
+
+.SnowflakePanel-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+/* Клин-драфт: заготовка снежинки, центр чуть ниже середины панели */
+.SnowflakePanel-wedge {
+  display: block;
+  margin-top: 34px;
+}
+
+.SnowflakePanel-wedge path {
+  fill: var(--white-4);
+}

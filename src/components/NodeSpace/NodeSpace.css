@@ -1,0 +1,38 @@
+.NodeSpace {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  padding: 16px;
+  border: var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.NodeSpace-columns {
+  display: flex;
+  gap: 16px;
+  height: 100%;
+  /* Место под бейджи и лампочки, выступающие за край нод */
+  padding: 9px 0 0 9px;
+  margin: -9px 0 0 -9px;
+  overflow-y: auto;
+}
+
+.NodeSpace-column {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  /* Лампочки висят слева от карточки на 9px */
+  padding-left: 9px;
+  margin-left: -9px;
+}
+
+.NodeSpace-buttons {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  display: flex;
+  gap: 8px;
+}

@@ -3,4 +3,16 @@
 @import 'stylesheets/fonts.css';
 @import 'stylesheets/basics.css';
 
+@import 'components/AddFx/AddFx.css';
 @import 'components/App/App.css';
+@import 'components/Button/Button.css';
+@import 'components/Dot/Dot.css';
+@import 'components/Dropdown/Dropdown.css';
+@import 'components/Fx/Fx.css';
+@import 'components/Icon/Icon.css';
+@import 'components/Knob/Knob.css';
+@import 'components/NodeSpace/NodeSpace.css';
+@import 'components/SnowflakePanel/SnowflakePanel.css';
+@import 'components/Steps/Steps.css';
+@import 'components/Strip/Strip.css';
+@import 'components/VoiceTab/VoiceTab.css';
