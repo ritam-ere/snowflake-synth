@@ -7,6 +7,7 @@ import * as Tone from 'tone'
 import { loopLengthTicks, midiToEvents, parseMidi } from '../core/midi.js'
 import { VOICE_IDS } from '../core/voices.js'
 import { createEffect } from './effects.js'
+import { EMPTY_GRAPH, desiredGraph, diffGraph } from './graph.js'
 import { createInstrument } from './instruments.js'
 
 import leadMidiUrl from '../data/midi/lead.mid'
@@ -34,8 +35,12 @@ async function loadMidi(url) {
 export function createEngine() {
   const voices = {}
   const listeners = new Set()
-  // Подключённые эффекты: ключ связи → { voiceId, effect }
-  const links = new Map()
+  // Звучащие эффекты: ключ экземпляра → эффект
+  const instances = new Map()
+  // Посылы голосов в эффекты: ключ посыла → Gain
+  const taps = new Map()
+  // Граф, который сейчас применён (см. graph.js)
+  let applied = EMPTY_GRAPH
   let master = null
   let meter = null
   let loading = null
@@ -161,39 +166,72 @@ export function createEngine() {
   }
 
   // ---------- Эффекты ----------
-  // Каждая связь «голос → нода» — свой экземпляр эффекта (раздел 9 ТЗ).
-  // Ключ связи выбирает вызывающий код, например «n2:lead»
+  // Экземпляр эффекта и посылы в него от голосов (см. graph.js)
 
-  function addEffect(key, voiceId, type, settings) {
-    if (!master || links.has(key)) return
-
+  function addInstance(key, type, settings) {
     const effect = createEffect(type, settings)
-    voices[voiceId].channel.connect(effect.input)
     effect.output.connect(master)
-    links.set(key, { voiceId, effect })
-  }
-
-  function setEffect(key, settings) {
-    links.get(key)?.effect.set(settings)
+    instances.set(key, effect)
   }
 
   // Посыл закрывается плавно, хвост доигрывает, затем dispose()
-  function removeEffect(key) {
-    const link = links.get(key)
-    if (!link) return Promise.resolve()
-
-    links.delete(key)
-    return link.effect.fadeOut()
+  function removeInstance(key) {
+    const effect = instances.get(key)
+    if (!effect) return
+    instances.delete(key)
+    effect.fadeOut()
   }
 
-  function effectKeys() {
-    return [...links.keys()]
+  // Посыл голоса в эффект включается и выключается плавно, без щелчка
+  function addTap(key, voiceId, instance) {
+    const gate = new Tone.Gain(0)
+    voices[voiceId].channel.connect(gate)
+    gate.connect(instances.get(instance).input)
+    gate.gain.rampTo(1, RAMP_SECONDS)
+    taps.set(key, gate)
+  }
+
+  function removeTap(key) {
+    const gate = taps.get(key)
+    if (!gate) return
+    taps.delete(key)
+    gate.gain.rampTo(0, RAMP_SECONDS)
+    setTimeout(() => gate.dispose(), RAMP_SECONDS * 1000 + 100)
+  }
+
+  // Пересобирает эффекты по состоянию: создаёт новые, обновляет
+  // параметры, плавно отключает лишние. Остальное не трогает
+  function syncGraph(state) {
+    const desired = desiredGraph(state)
+    const diff = diffGraph(applied, desired)
+
+    diff.removeTaps.forEach(removeTap)
+    diff.removeInstances.forEach(removeInstance)
+    diff.addInstances.forEach((key) => {
+      const { type, settings } = desired.instances.get(key)
+      addInstance(key, type, settings)
+    })
+    diff.addTaps.forEach((key) => {
+      const { voice, instance } = desired.taps.get(key)
+      addTap(key, voice, instance)
+    })
+    diff.updateInstances.forEach((key) => {
+      instances.get(key).set(desired.instances.get(key).settings)
+    })
+
+    applied = desired
+  }
+
+  // Что звучит сейчас — для debug-страницы и автотестов
+  function graphInfo() {
+    return { instances: [...instances.keys()], taps: [...taps.keys()] }
   }
 
   // ---------- Синхронизация с состоянием ядра ----------
 
   function update(state) {
-    if (!loading) return
+    // До окончания загрузки применять нечего: start() вызовет update сам
+    if (!loading || !VOICE_IDS.every((id) => voices[id])) return
 
     VOICE_IDS.forEach((id) => {
       const voice = voices[id]
@@ -209,6 +247,8 @@ export function createEngine() {
         switchInstrument(id, settings.instrument)
       }
     })
+
+    syncGraph(state)
   }
 
   // ---------- Транспорт ----------
@@ -246,10 +286,7 @@ export function createEngine() {
     stop,
     update,
     onStatus,
-    addEffect,
-    setEffect,
-    removeEffect,
-    effectKeys,
+    graphInfo,
     isPlaying,
     position,
     level,
