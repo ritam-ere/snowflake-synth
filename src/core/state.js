@@ -53,7 +53,8 @@ export function createInitialState() {
       // Счётчик для раскладки новых нод по колонкам по кругу
       cursor: 4
     },
-    ui: { openVoice: null },
+    // editing — режим редактирования (Edit / F), selected — выбранные ноды
+    ui: { openVoice: null, editing: false, selected: [] },
     nextId: 5
   }
 }
@@ -241,6 +242,67 @@ function openVoice(state, voice) {
   return { ...state, ui: { ...state.ui, openVoice: next } }
 }
 
+// ---------- Режим редактирования ----------
+
+// Вход и выход из режима Edit; при выходе выбор сбрасывается
+function setEditing(state, on) {
+  const editing = Boolean(on)
+  if (state.ui.editing === editing) return state
+
+  return { ...state, ui: { ...state.ui, editing, selected: [] } }
+}
+
+// Отметить ноду для удаления или снять отметку (только в режиме Edit)
+function toggleSelected(state, nodeId) {
+  if (!state.ui.editing || !state.nodes[nodeId]) return state
+
+  const { selected } = state.ui
+  const next = selected.includes(nodeId)
+    ? selected.filter((id) => id !== nodeId)
+    : [...selected, nodeId]
+  return { ...state, ui: { ...state.ui, selected: next } }
+}
+
+// Удалить ноды вместе с их связями и местами в колонках
+function deleteNodes(state, nodeIds) {
+  const gone = new Set((nodeIds || []).filter((id) => state.nodes[id]))
+  if (gone.size === 0) return state
+
+  const nodes = Object.fromEntries(
+    Object.entries(state.nodes).filter(([id]) => !gone.has(id))
+  )
+  return {
+    ...state,
+    nodes,
+    links: state.links.filter((l) => !gone.has(l.node)),
+    layout: {
+      ...state.layout,
+      columns: state.layout.columns.map((c) => c.filter((id) => !gone.has(id)))
+    },
+    ui: {
+      ...state.ui,
+      selected: state.ui.selected.filter((id) => !gone.has(id))
+    }
+  }
+}
+
+// Delete в режиме Edit: удалить выбранные ноды и выйти из режима
+function deleteSelected(state) {
+  if (state.ui.selected.length === 0) return state
+  return setEditing(deleteNodes(state, state.ui.selected), false)
+}
+
+// Reset All: на поле не остаётся ни одного эффекта — чистый звук.
+// Голоса и их настройки не меняются; новые ноды снова ложатся
+// с первой колонки. Режим Edit после сброса выключается
+function resetNodes(state) {
+  const cleared = deleteNodes(state, Object.keys(state.nodes))
+  return setEditing(
+    { ...cleared, layout: { ...cleared.layout, cursor: 0 } },
+    false
+  )
+}
+
 // Контракт контролов из synth-controls: handleChange(property, value),
 // где property — путь в состоянии массивом
 function change(state, property, value) {
@@ -279,6 +341,16 @@ export function reducer(state, action) {
       return openVoice(state, action.voice)
     case 'CHANGE':
       return change(state, action.property, action.value)
+    case 'SET_EDITING':
+      return setEditing(state, action.on)
+    case 'TOGGLE_SELECTED':
+      return toggleSelected(state, action.nodeId)
+    case 'DELETE_NODES':
+      return deleteNodes(state, action.nodeIds)
+    case 'DELETE_SELECTED':
+      return deleteSelected(state)
+    case 'RESET_NODES':
+      return resetNodes(state)
     default:
       return state
   }

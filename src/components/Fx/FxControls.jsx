@@ -55,7 +55,7 @@ function capitalize(name) {
   return name[0].toUpperCase() + name.slice(1)
 }
 
-export default function FxControls({ node, handleChange }) {
+export default function FxControls({ node, inert = false, handleChange }) {
   const { params } = EFFECTS[node.type]
   const property = (param) => ['nodes', node.id, 'settings', param]
 
@@ -136,7 +136,7 @@ export default function FxControls({ node, handleChange }) {
   }
 
   return (
-    <div className="FxControls">
+    <div className="FxControls" inert={inert}>
       {LAYOUTS[node.type].map(([param, kind, place]) => (
         <div key={param} className={`FxControls-slot is-${place}`}>
           {render(param, kind)}
