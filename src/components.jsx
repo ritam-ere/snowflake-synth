@@ -6,10 +6,13 @@ import Dot from './components/Dot/Dot.jsx'
 import Dropdown from './components/Dropdown/Dropdown.jsx'
 import Icon, { ICONS } from './components/Icon/Icon.jsx'
 import Knob from './components/Knob/Knob.jsx'
+import Snowflake from './components/Snowflake/Snowflake.jsx'
 import Steps from './components/Steps/Steps.jsx'
 import StepsPair from './components/Steps/StepsPair.jsx'
 import Strip from './components/Strip/Strip.jsx'
 import { EFFECTS, EFFECT_TYPES, defaultSettings } from './core/effects.js'
+import { STYLES, STYLE_IDS } from './core/motifs/index.js'
+import { createInitialState, reducer } from './core/state.js'
 import { INSTRUMENT_LABELS, VOICES, VOICE_IDS } from './core/voices.js'
 
 // Витрина контролов: каждый контрол как в ките и с текущим значением.
@@ -24,6 +27,61 @@ const KNOB_PARAMS = {
   phaser: ['freq', 'mix'],
   vibrato: ['depth', 'mix'],
   pitchShift: ['mix']
+}
+
+// Наборы эффектов для сравнения стилей ажура (задача 6.3)
+function presetState(types) {
+  let state = { ...createInitialState(), nodes: {}, links: [], nextId: 1 }
+  types.forEach((type) => {
+    state = reducer(state, { type: 'ADD_NODES', types: [type] })
+    const nodeId = `n${state.nextId - 1}`
+    state = reducer(state, { type: 'LINK', voice: 'lead', nodeId })
+  })
+  return state
+}
+
+const STYLE_PRESETS = {
+  Start: createInitialState(),
+  'All effects': presetState(EFFECT_TYPES),
+  'Edge & sides': presetState(['chorus', 'distortion', 'phaser', 'vibrato']),
+  Center: presetState(['reverb', 'delay', 'pitchShift'])
+}
+
+function SnowflakeStyles() {
+  const [preset, setPreset] = useState('Start')
+  return (
+    <section>
+      <h2 className="text-button">Snowflake styles</h2>
+      <p className="text-label hint">
+        Три стиля ажура с одной и той же таблицей «параметр → узор». Набор
+        эффектов переключается кнопками; ссылка под клином открывает синтезатор
+        в этом стиле.
+      </p>
+
+      <div className="row presets">
+        {Object.keys(STYLE_PRESETS).map((name) => (
+          <Button
+            key={name}
+            text={name}
+            active={preset === name}
+            handleClick={() => setPreset(name)}
+          />
+        ))}
+      </div>
+
+      <div className="row">
+        {STYLE_IDS.map((id) => (
+          <div className="card styles-card" key={id}>
+            <span className="text-small card-title">{STYLES[id].label}</span>
+            <Snowflake state={STYLE_PRESETS[preset]} style={id} />
+            <a className="text-small value" href={`/?style=${id}`}>
+              Try in synth →
+            </a>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
 }
 
 function capitalize(name) {
@@ -80,6 +138,8 @@ function Showcase() {
         Витрина контролов синтезатора. Каждый контрол выглядит как в UI Kit и
         работает: тяните, крутите колесо, нажимайте стрелки.
       </p>
+
+      <SnowflakeStyles />
 
       <section>
         <h2 className="text-button">Knob</h2>

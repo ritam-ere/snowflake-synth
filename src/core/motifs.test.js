@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { EFFECTS, EFFECT_TYPES } from './effects.js'
-import { motif } from './motifs.js'
+import { STYLE_IDS, motif } from './motifs/index.js'
 import { snowflakePattern } from './snowflake.js'
 import { createInitialState, reducer } from './state.js'
 
@@ -35,27 +35,39 @@ function extremes(spec) {
   ]
 }
 
-describe('мотивы вырезов', () => {
-  for (const type of EFFECT_TYPES) {
-    test(`${type}: есть фигуры, результат детерминирован`, () => {
-      const cut = cutOf(type)
-      const shapes = motif(cut)
-      expect(shapes.length).toBeGreaterThan(0)
-      expect(motif(cut)).toEqual(shapes)
-    })
-
-    for (const [param, spec] of Object.entries(EFFECTS[type].params)) {
-      test(`${type}: ${param} меняет вырез`, () => {
-        const [low, high] = extremes(spec)
-        // для delay Time заметен только при нескольких повторах
-        const base = type === 'delay' ? { feedback: 1 } : {}
-        const a = motif(cutOf(type, { ...base, [param]: low }))
-        const b = motif(cutOf(type, { ...base, [param]: high }))
-        expect(a).not.toEqual(b)
+for (const style of STYLE_IDS) {
+  describe(`мотивы вырезов: ${style}`, () => {
+    for (const type of EFFECT_TYPES) {
+      test(`${type}: есть фигуры, результат детерминирован`, () => {
+        const cut = cutOf(type)
+        const shapes = motif(cut, style)
+        expect(shapes.length).toBeGreaterThan(1)
+        expect(motif(cut, style)).toEqual(shapes)
       })
-    }
-  }
 
+      for (const [param, spec] of Object.entries(EFFECTS[type].params)) {
+        test(`${type}: ${param} меняет вырез`, () => {
+          const [low, high] = extremes(spec)
+          // для delay Time заметен только при нескольких повторах
+          const base = type === 'delay' ? { feedback: 1 } : {}
+          const a = motif(cutOf(type, { ...base, [param]: low }), style)
+          const b = motif(cutOf(type, { ...base, [param]: high }), style)
+          expect(a).not.toEqual(b)
+        })
+      }
+    }
+
+    test('ажур: вырез открывает область, дальше только бумага', () => {
+      for (const type of EFFECT_TYPES) {
+        const shapes = motif(cutOf(type), style)
+        expect(shapes[0].paper).toBeUndefined()
+        expect(shapes.slice(1).every((s) => s.paper)).toBe(true)
+      }
+    })
+  })
+}
+
+describe('мотивы вырезов: геометрия', () => {
   test('pitchShift: −12 / +7 / +12 — звезда в 4 / 5 / 6 лучей', () => {
     for (const [interval, rays] of [
       [-12, 4],
@@ -74,12 +86,9 @@ describe('мотивы вырезов', () => {
     expect(rings(1).length).toBeGreaterThan(3)
   })
 
-  test('ажур: вырез открывает область, бумажный узор остаётся', () => {
-    for (const type of EFFECT_TYPES) {
-      const shapes = motif(cutOf(type))
-      expect(shapes[0].paper).toBeUndefined()
-      expect(shapes.slice(1).every((s) => s.paper && s.stroke > 0)).toBe(true)
-    }
+  test('неизвестный стиль — геометрия', () => {
+    const cut = cutOf('reverb')
+    expect(motif(cut, 'nope')).toEqual(motif(cut, 'geometry'))
   })
 
   test('Mix делает узор тоньше', () => {
