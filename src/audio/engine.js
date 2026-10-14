@@ -6,6 +6,7 @@ import * as Tone from 'tone'
 
 import { loopLengthTicks, midiToEvents, parseMidi } from '../core/midi.js'
 import { VOICE_IDS } from '../core/voices.js'
+import { createEffect } from './effects.js'
 import { createInstrument } from './instruments.js'
 
 import leadMidiUrl from '../data/midi/lead.mid'
@@ -33,6 +34,8 @@ async function loadMidi(url) {
 export function createEngine() {
   const voices = {}
   const listeners = new Set()
+  // Подключённые эффекты: ключ связи → { voiceId, effect }
+  const links = new Map()
   let master = null
   let meter = null
   let loading = null
@@ -157,6 +160,36 @@ export function createEngine() {
     setStatus(id, 'ready')
   }
 
+  // ---------- Эффекты ----------
+  // Каждая связь «голос → нода» — свой экземпляр эффекта (раздел 9 ТЗ).
+  // Ключ связи выбирает вызывающий код, например «n2:lead»
+
+  function addEffect(key, voiceId, type, settings) {
+    if (!master || links.has(key)) return
+
+    const effect = createEffect(type, settings)
+    voices[voiceId].channel.connect(effect.input)
+    effect.output.connect(master)
+    links.set(key, { voiceId, effect })
+  }
+
+  function setEffect(key, settings) {
+    links.get(key)?.effect.set(settings)
+  }
+
+  // Посыл закрывается плавно, хвост доигрывает, затем dispose()
+  function removeEffect(key) {
+    const link = links.get(key)
+    if (!link) return Promise.resolve()
+
+    links.delete(key)
+    return link.effect.fadeOut()
+  }
+
+  function effectKeys() {
+    return [...links.keys()]
+  }
+
   // ---------- Синхронизация с состоянием ядра ----------
 
   function update(state) {
@@ -213,6 +246,10 @@ export function createEngine() {
     stop,
     update,
     onStatus,
+    addEffect,
+    setEffect,
+    removeEffect,
+    effectKeys,
     isPlaying,
     position,
     level,
