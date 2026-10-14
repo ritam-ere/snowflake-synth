@@ -12,7 +12,8 @@ export default function Fx({
   nodeId,
   linkTarget,
   focusVoice,
-  handleChange
+  handleChange,
+  handleUnlink
 }) {
   const node = state.nodes[nodeId]
   const spec = EFFECTS[node.type]
@@ -41,6 +42,15 @@ export default function Fx({
           {voices.map((voice) => (
             <span key={voice} className="Fx-lamp" data-lamp={voice}>
               <Dot voice={voice} />
+              {/* Наведение на лампочку → «×»: клик отключает голос от ноды */}
+              <span className="Fx-unlink">
+                <Dot
+                  voice={voice}
+                  variant="delete"
+                  label={`Unlink ${voice} from ${spec.label}`}
+                  handleClick={() => handleUnlink(voice, nodeId)}
+                />
+              </span>
             </span>
           ))}
         </span>
