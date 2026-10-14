@@ -1,0 +1,57 @@
+.Knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 70px;
+  user-select: none;
+}
+
+.Knob-body {
+  width: 70px;
+  height: 66px;
+  border-radius: 50%;
+  cursor: ns-resize;
+  /* Тач: жест перетаскивания не прокручивает страницу */
+  touch-action: none;
+  outline: none;
+}
+
+.Knob-body:focus-visible {
+  box-shadow: 0 0 0 2px var(--white-20);
+}
+
+.Knob svg {
+  display: block;
+  overflow: visible;
+}
+
+.Knob-track,
+.Knob-fill {
+  fill: none;
+}
+
+.Knob-track {
+  stroke: var(--white-20);
+}
+
+.Knob-fill {
+  stroke: var(--white-100);
+}
+
+.Knob-disk {
+  fill: var(--white-10);
+}
+
+.Knob-pointer {
+  fill: var(--white-100);
+  /* Обводка цвета карточки ноды отделяет поинтер от дуги */
+  stroke: var(--knob-outline, #1e1e1e);
+}
+
+.Knob-label {
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}

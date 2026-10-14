@@ -1,0 +1,62 @@
+@import 'stylesheets/vars.css';
+@import 'stylesheets/reset.css';
+@import 'stylesheets/fonts.css';
+@import 'stylesheets/basics.css';
+
+@import 'components/Knob/Knob.css';
+
+/* Витрина контролов (как elements-react в synth-controls) */
+.Showcase {
+  padding: 40px;
+}
+
+.Showcase .note {
+  max-width: 640px;
+  margin: 16px 0 48px;
+  line-height: 1.4;
+  color: var(--white-60);
+}
+
+.Showcase section {
+  margin-bottom: 56px;
+}
+
+.Showcase h2 {
+  margin-bottom: 12px;
+}
+
+.Showcase .hint {
+  margin-bottom: 24px;
+  line-height: 1.4;
+  color: var(--white-60);
+}
+
+.Showcase .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Карточка как у ноды эффекта: фон White 4, радиус 18 */
+.Showcase .card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 27px 20px;
+  background: var(--white-4);
+  border-radius: var(--radius-card);
+}
+
+.Showcase .card-title {
+  color: var(--white-60);
+}
+
+.Showcase .controls {
+  display: flex;
+  gap: 16px;
+}
+
+.Showcase .value {
+  color: var(--white-60);
+  font-variant-numeric: tabular-nums;
+}
