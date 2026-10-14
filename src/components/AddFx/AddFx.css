@@ -12,7 +12,8 @@
   cursor: pointer;
 }
 
-.AddFx:hover:not(:disabled) {
+.AddFx:hover:not(:disabled),
+.AddFx.is-open {
   color: var(--white-60);
 }
 
