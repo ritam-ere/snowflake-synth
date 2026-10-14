@@ -1,0 +1,58 @@
+.Button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  height: 54px;
+  background: var(--white-4);
+  border: var(--border);
+  border-radius: var(--radius-card);
+  color: var(--white-60);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+
+.Button:hover:not(:disabled),
+.Button.is-active {
+  background: var(--white-10);
+  color: var(--white-100);
+}
+
+.Button.is-faint {
+  color: var(--white-20);
+}
+
+/* Блеклая кнопка при наведении светлеет на одну ступень */
+.Button.is-faint:hover:not(:disabled) {
+  color: var(--white-60);
+}
+
+.Button:focus-visible {
+  box-shadow: 0 0 0 2px var(--white-20);
+}
+
+.Button:disabled {
+  color: var(--white-20);
+  cursor: default;
+}
+
+.Button-icon {
+  justify-content: center;
+  width: 54px;
+  padding: 12px;
+}
+
+.Button-icon-text {
+  gap: 4px;
+  padding: 12px 20px 12px 12px;
+}
+
+.Button-text {
+  padding: 12px 20px;
+}
+
+.Button-hotkey {
+  color: var(--white-20);
+}

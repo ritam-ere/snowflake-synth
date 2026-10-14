@@ -3,7 +3,10 @@
 @import 'stylesheets/fonts.css';
 @import 'stylesheets/basics.css';
 
+@import 'components/Button/Button.css';
+@import 'components/Dot/Dot.css';
 @import 'components/Dropdown/Dropdown.css';
+@import 'components/Icon/Icon.css';
 @import 'components/Knob/Knob.css';
 @import 'components/Steps/Steps.css';
 @import 'components/Strip/Strip.css';
@@ -94,4 +97,41 @@
 .Showcase .voice-card {
   min-width: 210px;
   min-height: 150px;
+}
+
+.Showcase .dots {
+  gap: 32px;
+}
+
+.Showcase .dot-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.Showcase .buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.Showcase .icons {
+  gap: 24px;
+  color: var(--white-60);
+}
+
+.Showcase .icon-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Точки лежат прямо на фоне экрана, как в макете: кольцо цвета фона
+   становится видно, только когда точка заходит на плашку голоса */
+.Showcase .card-plain {
+  background: none;
+  border: var(--border);
 }
