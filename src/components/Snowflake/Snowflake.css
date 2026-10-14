@@ -6,13 +6,13 @@
 
 /* Бумага — плоская, без теней; сквозь вырезы виден фон панели */
 .Snowflake-paper {
-  fill: var(--white-10);
+  fill: var(--white-80);
 }
 
-/* Слабая линия сгиба: бумага сложена */
+/* Слабая тёмная линия сгиба на светлой бумаге: бумага сложена */
 .Snowflake-crease {
   fill: none;
-  stroke: var(--white-4);
+  stroke: rgba(0, 0, 0, 0.12);
   stroke-width: 1;
   stroke-dasharray: 3 5;
 }
