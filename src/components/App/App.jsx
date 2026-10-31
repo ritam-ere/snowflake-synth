@@ -136,6 +136,7 @@ export default function App() {
     <main className="App">
       <SnowflakePanel
         state={state}
+        engine={engine.current}
         open={panelOpen}
         handleToggle={() => dispatch({ type: 'SET_PANEL', open: !panelOpen })}
       />

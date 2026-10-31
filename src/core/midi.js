@@ -159,6 +159,7 @@ export function midiToEvents(midi, tonePpq = 192) {
   return midi.notes.map((note) => ({
     time: toTicks(note.ticks),
     note: midiToNoteName(note.midi),
+    midi: note.midi,
     duration: toTicks(note.durationTicks),
     velocity: Math.round((note.velocity / 127) * 1000) / 1000
   }))
