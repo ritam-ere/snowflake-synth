@@ -1,134 +1,142 @@
 // Снегопад в панели слева (прототип): каждая сыгранная нота выпускает
-// снежинку из круглых «пикселей» в цвете своего голоса. Чистые функции
-// без DOM: форма снежинки и то, как эффекты голоса меняют её полёт.
+// пиксельную снежинку. Снежинки падают по сетке ступеньками, как фигуры
+// в тетрисе, и уходят за нижний край. Чистые функции без DOM.
 //
-// Правило консистентности: эффекты не меняют ни форму, ни цвет
-// снежинки — только движение и свет:
-//   Vibrato, Chorus — покачивание при падении;
-//   Phaser          — вращение;
-//   Reverb          — светящийся шлейф;
-//   Delay           — эхо-снежинки вслед (Ping-Pong — вразлёт);
-//   Distortion      — мерцание;
-//   Pitch Shift     — размер (вниз — крупнее, вверх — мельче).
+// Эффекты голоса меняют только то, как снежинка падает:
+//   Vibrato, Chorus — качается влево-вправо на клетку-другую;
+//   Phaser          — сносит вбок, как ветром;
+//   Reverb          — снежинка легче, падает медленнее;
+//   Delay           — следом падают эхо-снежинки (Ping-Pong — вразлёт);
+//   Distortion      — тяжелее и дёргается;
+//   Pitch Shift     — снежинка крупнее (вниз) или мельче (вверх).
 
 import { EFFECTS } from './effects.js'
 import { toNormal } from './scale.js'
 import { nodesOfVoice } from './state.js'
 
-// ---------- Форма ----------
-// Пиксели лежат на треугольной решётке: точка i·a + j·b, где
-// a = (1, 0), b = (1/2, √3/2). Решётка переходит в себя при поворотах
-// на 60° и отражениях, поэтому снежинка строится в секторе 0…60° и
-// размножается 12 симметриями — получается правильная шестилучевая.
+// ---------- Формы ----------
+// Снежинка — набор клеток квадратной сетки вокруг центра (0, 0).
+// Рисуется восьмая часть, остальное — отражениями по осям и
+// диагоналям, поэтому любая форма симметрична, как настоящая снежинка.
 
-const H = Math.sqrt(3) / 2
+// Отрезок от центра вдоль оси x: клетки from…to с шагом step
+const axis = (to, from = 1, step = 1) =>
+  range(from, to, step).map((t) => [t, 0])
 
-function toXY(i, j) {
-  return [i + j / 2, j * H]
+// Отрезок вдоль диагонали
+const diag = (to, from = 1, step = 1) =>
+  range(from, to, step).map((t) => [t, t])
+
+// Веточки поперёк оси в клетке at длиной len
+const ticks = (at, len = 1) => range(1, len).map((k) => [at, k])
+
+// Кольца радиуса r: квадратное, ромбом и круглое
+function square(r) {
+  return range(0, r).map((k) => [r, k])
 }
 
-function toIJ(x, y) {
-  const j = Math.round(y / H)
-  return [Math.round(x - j / 2), j]
+function diamond(r) {
+  return range(0, r).map((k) => [r - k, k])
 }
 
-// Расстояние в шагах решётки (шестиугольное)
-export function ring(i, j) {
-  return (Math.abs(i) + Math.abs(j) + Math.abs(i + j)) / 2
-}
-
-// Генератор псевдослучайных чисел из сида (mulberry32)
-export function random(seed) {
-  let t = Math.floor(seed * 4294967296) >>> 0
-  return () => {
-    t = (t + 0x6d2b79f5) >>> 0
-    let r = Math.imul(t ^ (t >>> 15), 1 | t)
-    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r
-    return ((r ^ (r >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-// Точки одного сектора (0…60°). «Конституция» снежинки — из сида:
-//   star   — тонкий луч с вилкой на кончике;
-//   fern   — луч с короткими веточками через одну;
-//   ring   — колечко в серединке и лучи;
-//   dotted — пунктирный луч с крупной вилкой
-const KINDS = ['star', 'fern', 'ring', 'dotted']
-
-// Веточка (t, u) отходит от луча под 60°. Чтобы веточки соседних лучей
-// не смыкались в сплошной шестиугольник, держим её ближе к своему лучу:
-// u ≤ t / 2 (угол от луча не больше ≈ 20°)
-function branchFits(t, u, size) {
-  return u <= t / 2 && t + u <= size
-}
-
-function sector(rand, size) {
-  const kind = KINDS[Math.floor(rand() * KINDS.length)]
-  // У «колечка» центр пустой: шесть первых пикселей лучей — кольцо
-  const points = kind === 'ring' ? [] : [[0, 0]]
-  const add = (i, j) => points.push([i, j])
-
-  // Луч
-  for (let t = 1; t <= size; t++) {
-    if (kind !== 'dotted' || t % 2 === size % 2 || t === 1) add(t, 0)
-  }
-
-  // Веточки под 60° от луча
-  if (kind === 'fern') {
-    for (let t = 2 + Math.floor(rand() * 2); t < size; t += 2) {
-      for (let u = 1; branchFits(t, u, size) && u <= 2; u++) add(t, u)
+function circle(r) {
+  const cells = []
+  for (let x = 0; x <= r; x++) {
+    for (let y = 0; y <= x; y++) {
+      if (Math.round(Math.hypot(x, y)) === r) cells.push([x, y])
     }
   }
-
-  // Вилка на кончике луча
-  if (kind !== 'fern' && branchFits(size - 1, 1, size)) {
-    add(size - 1, 1)
-    if (kind === 'dotted' && branchFits(size - 1, 2, size + 1)) add(size - 1, 2)
-  }
-
-  return points
+  return cells
 }
 
-// Снежинка: список пикселей { x, y, ring } в шагах решётки, центр в 0.
-// size — длина луча в пикселях (2–6), seed — 0…1
-export function flakeShape(seed, size) {
-  const rand = random(seed)
-  const seen = new Map()
+const dot = (x, y) => [[x, y]]
+const center = [[0, 0]]
 
-  sector(rand, size).forEach(([i, j]) => {
-    const [x, y] = toXY(i, j)
-    for (let k = 0; k < 6; k++) {
-      const a = (Math.PI / 3) * k
-      const cos = Math.cos(a)
-      const sin = Math.sin(a)
-      for (const sy of [1, -1]) {
-        const px = x * cos - y * sy * sin
-        const py = x * sin + y * sy * cos
-        const [pi, pj] = toIJ(px, py)
-        const key = `${pi},${pj}`
-        if (!seen.has(key)) {
-          const [qx, qy] = toXY(pi, pj)
-          seen.set(key, { x: qx, y: qy, ring: ring(pi, pj) })
+function range(from, to, step = 1) {
+  const out = []
+  for (let t = from; t <= to; t += step) out.push(t)
+  return out
+}
+
+// Набор форм от маленьких к большим: радиус (клеток от центра) и
+// восьмая часть рисунка
+export const SHAPES = [
+  // маленькие, радиус 1–2
+  { r: 1, cells: [...center, ...axis(1)] },
+  { r: 1, cells: [...center, ...diag(1)] },
+  { r: 1, cells: [...axis(1), ...diag(1)] },
+  { r: 2, cells: [...circle(2)] },
+  { r: 2, cells: [...center, ...diag(2, 2), ...axis(2, 2)] },
+  { r: 2, cells: [...center, ...diag(1), ...axis(2, 2)] },
+  { r: 2, cells: [...square(2), ...axis(1)] },
+  { r: 2, cells: [...square(2), ...center] },
+  // средние, радиус 3
+  { r: 3, cells: [...axis(3), ...diag(2), ...center] },
+  { r: 3, cells: [...axis(3), ...ticks(2), ...center] },
+  { r: 3, cells: [...circle(3), ...center] },
+  { r: 3, cells: [...circle(3), ...axis(1), ...diag(1)] },
+  { r: 3, cells: [...diamond(3), ...axis(1), ...center] },
+  { r: 3, cells: [...square(3), ...diag(2), ...center] },
+  { r: 3, cells: [...diag(3), ...dot(2, 0), ...center] },
+  { r: 3, cells: [...square(1), ...axis(3, 3), ...diag(3, 3)] },
+  // большие, радиус 4–5
+  { r: 4, cells: [...axis(4), ...ticks(3), ...diag(2), ...center] },
+  { r: 4, cells: [...axis(4), ...ticks(4), ...circle(2)] },
+  { r: 4, cells: [...diag(4), ...dot(3, 1), ...axis(2), ...center] },
+  { r: 4, cells: [...circle(4), ...axis(4), ...diag(2), ...center] },
+  { r: 4, cells: [...diamond(4), ...square(1), ...axis(2, 2)] },
+  { r: 4, cells: [...square(2), ...axis(4, 3), ...diag(4, 3), ...center] },
+  { r: 5, cells: [...axis(5), ...ticks(2), ...ticks(4, 2), ...center] },
+  { r: 5, cells: [...axis(5), ...diag(3), ...circle(3), ...center] },
+  { r: 5, cells: [...axis(5, 3), ...diamond(2), ...diag(4, 3), ...center] },
+  { r: 5, cells: [...diag(5), ...dot(4, 2), ...axis(2), ...center] }
+]
+
+// Восьмая часть → вся снежинка (8 симметрий квадрата)
+export function shapeCells(index) {
+  const seen = new Set()
+  const cells = []
+  SHAPES[index].cells.forEach(([x, y]) => {
+    for (const [a, b] of [
+      [x, y],
+      [y, x]
+    ]) {
+      for (const sx of [1, -1]) {
+        for (const sy of [1, -1]) {
+          const key = `${a * sx},${b * sy}`
+          if (!seen.has(key)) {
+            seen.add(key)
+            cells.push([a * sx, b * sy])
+          }
         }
       }
     }
   })
-
-  return [...seen.values()]
+  return cells
 }
 
-// ---------- Нота → снежинка ----------
+// Группы форм по размеру
+const GROUPS = {
+  small: SHAPES.map((s, i) => [s, i])
+    .filter(([s]) => s.r <= 2)
+    .map(([, i]) => i),
+  medium: SHAPES.map((s, i) => [s, i])
+    .filter(([s]) => s.r === 3)
+    .map(([, i]) => i),
+  large: SHAPES.map((s, i) => [s, i])
+    .filter(([s]) => s.r >= 4)
+    .map(([, i]) => i)
+}
+const ORDER = ['small', 'medium', 'large']
+const VOICE_GROUP = { extra: 0, lead: 1, bass: 2 }
 
-// Длина луча: бас — крупные снежинки, верхний голос — мелкие;
-// внутри голоса выше нота — чуть мельче
-const SIZES = { bass: [6, 5], lead: [5, 4], extra: [4, 3] }
-const RANGES = { bass: [29, 48], lead: [50, 65], extra: [62, 77] }
-
-export function flakeSize(voice, midi) {
-  const [big, small] = SIZES[voice]
-  const [low, high] = RANGES[voice]
-  const t = Math.min(1, Math.max(0, (midi - low) / (high - low)))
-  return t < 0.5 ? big : small
+// Нота → форма: бас — большие снежинки, lead — средние, extra — маленькие.
+// sizeShift (Pitch Shift) сдвигает группу на ступень. Одна и та же нота —
+// одна и та же снежинка
+export function shapeFor(voice, midi, sizeShift = 0) {
+  const level = Math.min(2, Math.max(0, VOICE_GROUP[voice] + sizeShift))
+  const group = GROUPS[ORDER[level]]
+  return group[(midi * 7) % group.length]
 }
 
 // Где снежинка появляется по ширине, 0…1: в основном случайно (r — 0…1),
@@ -141,7 +149,20 @@ export function spawnX(midi, pan = 0, r = 0.5) {
   )
 }
 
-// ---------- Эффекты голоса → полёт ----------
+// ---------- Вес ----------
+
+// Вес снежинки: крупнее — тяжелее, плюс своя случайная добавка
+// (r — 0…1). Тяжёлая падает быстрее
+export function weightOf(index, r = 0.5) {
+  return 0.6 + SHAPES[index].r * 0.12 + r * 0.5
+}
+
+// Сколько секунд между шагами вниз на одну клетку
+export function stepSeconds(weight, lightness = 1) {
+  return 0.075 / (weight * lightness)
+}
+
+// ---------- Эффекты голоса → падение ----------
 
 function norm(node, param) {
   return toNormal(node.settings[param], EFFECTS[node.type].params[param])
@@ -149,19 +170,19 @@ function norm(node, param) {
 
 const BEATS = { '8n': 0.5, '4n': 1, '2n': 2 }
 
-// Как летят снежинки голоса при текущих эффектах. Значения
-// складываются от всех подключённых нод, каждая — с весом своего Mix
+// Как падают снежинки голоса при текущих эффектах. Вклад каждой
+// подключённой ноды — с весом её Mix
 export function voiceLook(state, voice) {
   const look = {
-    sway: 0, // покачивание, доля размера снежинки
-    swayRate: 0.35, // качаний в секунду
-    spin: 0, // оборотов в секунду
-    trail: 0, // длина шлейфа, 0…1
+    wobble: 0, // размах качания, клеток
+    wobbleSteps: 6, // шагов вниз на одно качание
+    drift: 0, // снос вбок: клетка на столько шагов вниз (0 — нет)
+    lightness: 1, // множитель скорости: < 1 — медленнее
     echoes: 0, // число эхо-снежинок
     echoBeats: 1, // промежуток между эхо, в долях такта
     pingPong: false,
-    twinkle: 0, // сила мерцания, 0…1
-    scale: 1
+    jitter: 0, // вероятность дёрнуться вбок на шаге
+    sizeShift: 0
   }
 
   nodesOfVoice(state, voice).forEach((id) => {
@@ -171,21 +192,21 @@ export function voiceLook(state, voice) {
 
     switch (node.type) {
       case 'vibrato':
-        look.sway += mix * (0.3 + norm(node, 'depth'))
-        look.swayRate = Math.max(look.swayRate, 0.2 + norm(node, 'rate') * 1.2)
-        break
       case 'chorus':
-        look.sway += mix * (0.2 + 0.6 * norm(node, 'depth'))
-        look.swayRate = Math.max(look.swayRate, 0.2 + norm(node, 'rate') * 0.8)
+        look.wobble = Math.max(
+          look.wobble,
+          Math.round(mix * (1 + 2 * norm(node, 'depth')))
+        )
+        look.wobbleSteps = Math.min(
+          look.wobbleSteps,
+          Math.round(8 - 5 * norm(node, 'rate'))
+        )
         break
       case 'phaser':
-        look.spin += mix * (0.05 + 0.25 * norm(node, 'freq'))
+        look.drift = Math.max(2, Math.round(10 - 7 * mix * norm(node, 'freq')))
         break
       case 'reverb':
-        look.trail = Math.max(
-          look.trail,
-          mix * (0.3 + 0.7 * node.settings.decay)
-        )
+        look.lightness *= 1 - 0.45 * mix * (0.3 + 0.7 * node.settings.decay)
         break
       case 'delay':
         look.echoes = Math.max(
@@ -195,22 +216,18 @@ export function voiceLook(state, voice) {
         look.echoBeats = BEATS[node.settings.timeL] ?? 1
         look.pingPong = node.settings.pingPong
         break
-      case 'distortion':
-        look.twinkle = Math.max(
-          look.twinkle,
-          mix * (0.3 + 0.7 * norm(node, 'drive'))
-        )
-        break
-      case 'pitchShift': {
-        const factor = { [-12]: 1.3, 7: 0.9, 12: 0.75 }[node.settings.interval]
-        look.scale *= 1 + (factor - 1) * Math.min(1, mix * 1.5)
+      case 'distortion': {
+        const drive = mix * (0.3 + 0.7 * norm(node, 'drive'))
+        look.lightness *= 1 + 0.5 * drive
+        look.jitter = Math.max(look.jitter, drive * 0.25)
         break
       }
+      case 'pitchShift':
+        if (mix >= 0.3) look.sizeShift = node.settings.interval < 0 ? 1 : -1
+        break
     }
   })
 
-  look.sway = Math.min(look.sway, 1.2)
-  look.spin = Math.min(look.spin, 0.4)
   look.echoes = Math.min(look.echoes, 2)
   return look
 }
