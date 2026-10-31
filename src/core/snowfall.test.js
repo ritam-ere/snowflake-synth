@@ -6,7 +6,9 @@ import {
   PULSE,
   cellsPerBeat,
   ease,
-  echoColumn,
+  breath,
+  variantCells,
+  variantRadius,
   pickColumn,
   pulseTravel,
   shapeCells,
@@ -128,14 +130,59 @@ describe('где появляется', () => {
     expect(pickColumn([10, 30, 50], flakes, options)).toBe(50)
     expect(pickColumn([10, 30, 20], flakes, options)).toBe(20)
   })
+})
 
-  test('эхо Ping-Pong — зеркально, без Ping-Pong — рядом и внутри панели', () => {
-    expect(echoColumn(10, 60, true, 1)).toBe(49)
-    const near = echoColumn(30, 60, false, 1, 0.2)
-    expect(Math.abs(near - 30)).toBeGreaterThanOrEqual(6)
-    expect(Math.abs(near - 30)).toBeLessThanOrEqual(12)
-    const edge = echoColumn(2, 60, false, 1, 0.1)
-    expect(edge).toBeGreaterThanOrEqual(0)
+describe('вариации формы', () => {
+  const index = SHAPES.findIndex((sh) => sh.r === 3)
+  const count = (v) => variantCells(index, v).length
+
+  test('ореол, шипы и шум добавляют пиксели и раздвигают снежинку', () => {
+    const plain = count({})
+    expect(count({ halo: 1 })).toBeGreaterThan(plain)
+    expect(count({ halo: 2 })).toBeGreaterThan(count({ halo: 1 }))
+    expect(count({ halo: 2, haloDotted: true })).toBeLessThan(
+      count({ halo: 2 })
+    )
+    expect(count({ spikes: 2 })).toBeGreaterThan(plain)
+    expect(count({ noise: 3 })).toBeGreaterThan(plain)
+    expect(variantRadius(index, { halo: 2 })).toBe(6)
+    expect(variantRadius(index, { spikes: 3 })).toBe(6)
+  })
+
+  test('вариации симметричны, как сама снежинка', () => {
+    const cells = variantCells(index, {
+      halo: 2,
+      spikes: 2,
+      noise: 6,
+      noiseSeed: 1
+    })
+    const set = new Set(cells.map(([x, y]) => `${x},${y}`))
+    cells.forEach(([x, y]) => {
+      expect(set.has(`${-x},${y}`)).toBe(true)
+      expect(set.has(`${y},${x}`)).toBe(true)
+    })
+  })
+
+  test('шум мерцает: другой вариант — другие пиксели', () => {
+    const key = (seed) =>
+      variantCells(index, { noise: 3, noiseSeed: seed })
+        .map(([x, y]) => `${x},${y}`)
+        .sort()
+        .join('|')
+    expect(key(0)).not.toBe(key(1))
+    expect(key(2)).toBe(key(2))
+  })
+
+  test('эхо-копия — каждый второй пиксель', () => {
+    expect(count({ echo: true })).toBeLessThan(count({}))
+  })
+
+  test('дыхание двойника Chorus зависит от формы волны', () => {
+    expect(breath('sine', 0)).toBeCloseTo(0)
+    expect(breath('sine', 0.5)).toBeCloseTo(1)
+    expect(breath('triangle', 0.25)).toBeCloseTo(0.5)
+    expect(breath('square', 0.2)).toBe(1)
+    expect(breath('square', 0.7)).toBe(0.25)
   })
 })
 
@@ -159,47 +206,59 @@ describe('эффекты голоса → падение', () => {
   test('без эффектов снежинка просто падает', () => {
     const look = voiceLook({ ...createInitialState(), links: [] }, 'lead')
     expect(look).toMatchObject({
+      sizeShift: 0,
+      halo: 0,
+      spikes: 0,
+      noise: 0,
+      double: 0,
       wobble: 0,
-      drift: 0,
-      lightness: 1,
+      spin: 0,
       echoes: 0,
-      tremor: 0,
-      sizeShift: 0
+      lightness: 1
     })
   })
 
-  test('каждый эффект меняет своё свойство падения', () => {
-    expect(lookWith('vibrato').wobble).toBeGreaterThan(0)
-    expect(lookWith('chorus').wobble).toBeGreaterThan(0)
-    expect(lookWith('phaser').drift).toBeGreaterThan(0)
-    expect(lookWith('reverb').lightness).toBeLessThan(1)
-    expect(lookWith('delay').echoes).toBeGreaterThan(0)
-    expect(lookWith('distortion').tremor).toBeGreaterThan(0)
-    expect(lookWith('distortion').lightness).toBeGreaterThan(1)
+  test('у каждого эффекта свой знак', () => {
     expect(lookWith('pitchShift', { interval: -12 }).sizeShift).toBe(1)
     expect(lookWith('pitchShift', { interval: 12 }).sizeShift).toBe(-1)
+    expect(lookWith('reverb').halo).toBeGreaterThan(0)
+    expect(lookWith('reverb').lightness).toBeLessThan(1)
+    expect(lookWith('distortion').spikes).toBeGreaterThan(0)
+    expect(lookWith('distortion').noise).toBeGreaterThan(0)
+    expect(lookWith('chorus').double).toBeGreaterThan(0)
+    expect(lookWith('vibrato').wobble).toBeGreaterThan(0)
+    expect(lookWith('phaser').spin).toBeGreaterThan(0)
+    expect(lookWith('delay').echoes).toBeGreaterThan(0)
   })
 
-  test('контролы меняют падение плавно по значению', () => {
-    expect(lookWith('vibrato', { depth: 1 }).wobble).toBeGreaterThan(
-      lookWith('vibrato', { depth: 0.1 }).wobble
-    )
-    expect(lookWith('vibrato', { rate: 10 }).wobbleRate).toBeGreaterThan(
-      lookWith('vibrato', { rate: 1 }).wobbleRate
-    )
-    expect(lookWith('reverb', { decay: 1 }).lightness).toBeLessThan(
-      lookWith('reverb', { decay: 0 }).lightness
-    )
-    expect(lookWith('phaser', { mix: 1 }).drift).toBeGreaterThan(
-      lookWith('phaser', { mix: 0.2 }).drift
-    )
+  test('каждый контрол меняет свою черту', () => {
+    const more = (type, param, low, high, key) =>
+      expect(lookWith(type, { [param]: high })[key]).toBeGreaterThan(
+        lookWith(type, { [param]: low })[key]
+      )
+    more('reverb', 'decay', 0, 1, 'halo')
+    expect(lookWith('reverb', { mix: 0.3 }).haloDotted).toBe(true)
+    expect(lookWith('reverb', { mix: 1 }).haloDotted).toBe(false)
+    more('distortion', 'drive', 0, 1, 'noise')
+    more('distortion', 'tone', 1000, 12000, 'flicker')
+    more('chorus', 'depth', 0, 1, 'double')
+    more('chorus', 'rate', 0.1, 8, 'doubleRate')
+    expect(lookWith('chorus', { wave: 'square' }).doubleWave).toBe('square')
+    more('vibrato', 'depth', 0, 1, 'wobble')
+    more('vibrato', 'rate', 1, 10, 'wobbleRate')
+    more('phaser', 'freq', 0.1, 4, 'spin')
+    more('phaser', 'oct', 1, 5, 'swing')
+    more('delay', 'feedback', 0, 0.95, 'echoes')
+    expect(lookWith('delay', { timeL: '2n' }).echoBeats[0]).toBe(2)
+    expect(lookWith('delay', { timeR: '8n' }).echoBeats[1]).toBe(0.5)
+    expect(lookWith('delay', { pingPong: false }).pingPong).toBe(false)
   })
 
-  test('Mix 0 — эффект на падение не влияет', () => {
-    expect(lookWith('reverb', { mix: 0 }).lightness).toBe(1)
+  test('Mix 0 — эффект не действует', () => {
+    expect(lookWith('reverb', { mix: 0 }).halo).toBe(0)
   })
 
-  test('Delay: эхо не больше двух', () => {
+  test('Delay: эхо-копий не больше двух', () => {
     expect(
       lookWith('delay', { feedback: 0.95, mix: 1 }).echoes
     ).toBeLessThanOrEqual(2)

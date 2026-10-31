@@ -2,14 +2,15 @@ import React, { useEffect, useRef } from 'react'
 
 import {
   SHAPES,
+  breath,
   candidateColumns,
   cellsPerBeat,
   ease,
-  echoColumn,
   pickColumn,
   pulseTravel,
-  shapeCells,
   shapeFor,
+  variantCells,
+  variantRadius,
   voiceLook,
   weightOf
 } from '../../core/snowfall.js'
@@ -19,34 +20,31 @@ import { VOICE_IDS } from '../../core/voices.js'
 // пиксельную снежинку; она плавно падает и уходит за нижний край.
 // Скорость пульсирует на долях такта синтезатора — снег идёт в ритм.
 // У каждой снежинки свой вес: тяжёлые падают быстрее. Новая снежинка
-// выбирает место, где ни с кем не столкнётся. Эффекты голоса меняют
-// падение (core/snowfall.js), и уже летящие снежинки тоже: подключили
-// эффект или покрутили контрол — снег плавно перестраивается.
-// Все снежинки пока белые.
+// выбирает место, где ни с кем не столкнётся.
+//
+// Эффекты голоса сразу меняют все его снежинки, и уже летящие тоже
+// (core/snowfall.js): форму — размер, ореол, шипы, шум, двойник — и
+// полёт — качание, вращение, эхо-копии. Все снежинки пока белые.
 
-// Сколько снежинок может лететь одновременно. Летящие снежинки никогда
-// не убираются раньше времени — каждая долетает до низа и уходит за край.
-// Когда эффекты замедляют снег (Reverb) или добавляют эхо (Delay), на
-// экране становится теснее: тогда реже выпускаем новые
-const CROWDED = 55 // дальше эхо Delay не выпускается
-const FULL = 80 // дальше не выпускается ничего, пока снег не поредеет
-// Не чаще одной снежинки за столько секунд от голоса: бас играет
-// часто, иначе снег слипается в сугроб
+// Летящие снежинки никогда не убираются раньше времени — каждая
+// долетает до низа. Когда на экране тесно, реже выпускаем новые
+const FULL = 70
+// Не чаще одной снежинки за столько секунд от голоса
 const MIN_GAP = { lead: 0.4, bass: 0.8, extra: 0.5 }
 const COLOR = '#ffffff'
 
-// Спрайт формы: клетки cell × cell, без сглаживания
-function renderSprite(index, cell, dpr) {
-  const r = SHAPES[index].r
-  const side = (r * 2 + 1) * cell
+// Спрайт снежинки с вариациями: клетки cell × cell, без сглаживания
+function renderSprite(index, variant, cell, dpr) {
+  const R = variantRadius(index, variant)
+  const side = (R * 2 + 1) * cell
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(side * dpr)
   canvas.height = Math.round(side * dpr)
   const ctx = canvas.getContext('2d')
   ctx.scale(dpr, dpr)
   ctx.fillStyle = COLOR
-  shapeCells(index).forEach(([x, y]) => {
-    ctx.fillRect((x + r) * cell, (y + r) * cell, cell, cell)
+  variantCells(index, variant).forEach(([x, y]) => {
+    ctx.fillRect((x + R) * cell, (y + R) * cell, cell, cell)
   })
   return { canvas, side }
 }
@@ -63,12 +61,12 @@ export default function Snowfall({ engine, state }) {
     const sprites = new Map()
     const lastLaunch = {}
     let flakes = []
-    let pending = []
     let width = 0
     let height = 0
     let dpr = 1
     let cell = 5
     let now = 0
+    let beat = 0
     let lastBeats = null
 
     const columns = () => Math.floor(width / cell)
@@ -85,9 +83,22 @@ export default function Snowfall({ engine, state }) {
       sprites.clear()
     }
 
-    function sprite(index) {
-      const key = `${index}|${cell}|${dpr}`
-      if (!sprites.has(key)) sprites.set(key, renderSprite(index, cell, dpr))
+    function sprite(index, variant) {
+      const key = [
+        index,
+        variant.halo,
+        variant.haloDotted,
+        variant.spikes,
+        variant.noise,
+        variant.noiseSeed,
+        variant.echo,
+        cell,
+        dpr
+      ].join('|')
+      if (!sprites.has(key)) {
+        if (sprites.size > 600) sprites.clear()
+        sprites.set(key, renderSprite(index, variant, cell, dpr))
+      }
       return sprites.get(key)
     }
 
@@ -97,33 +108,23 @@ export default function Snowfall({ engine, state }) {
       return Math.min(columns() - margin - 1, Math.max(margin, col))
     }
 
-    function launch(note, echo = 0, near = null) {
+    function launch(note) {
       const look = voiceLook(stateRef.current, note.voice)
-      if (echo === 0) {
-        if (now - (lastLaunch[note.voice] ?? -1) < MIN_GAP[note.voice]) return
-        if (flakes.length >= FULL) return
-        // Медленный снег живёт дольше — выпускаем его реже, чтобы
-        // плотность по всей высоте оставалась ровной
-        if (Math.random() > Math.min(1, look.lightness)) return
-        lastLaunch[note.voice] = now
-      } else if (flakes.length >= CROWDED) {
-        return
-      }
+      if (now - (lastLaunch[note.voice] ?? -1) < MIN_GAP[note.voice]) return
+      if (flakes.length >= FULL) return
+      // Медленный снег живёт дольше — выпускаем его реже, чтобы
+      // плотность по всей высоте оставалась ровной
+      if (Math.random() > Math.min(1, look.lightness)) return
+      lastLaunch[note.voice] = now
 
       const pan = stateRef.current.voices[note.voice].pan
       const index = shapeFor(note.voice, note.midi, look.sizeShift)
-      const r = SHAPES[index].r
-      const cols = columns()
+      const r = variantRadius(index, look)
       const base = cellsPerBeat(weightOf(index, Math.random()))
       const speed = base * look.lightness
 
-      // Кандидаты — по всей ширине, а для эха — рядом с его местом
-      const candidates =
-        near === null
-          ? candidateColumns(cols, r, pan)
-          : [-2, -1, 0, 1, 2].map((d) => keepInside(near + d * 2, r))
-      const col = pickColumn(candidates, flakes, {
-        r: r + look.wobble,
+      const col = pickColumn(candidateColumns(columns(), r, pan), flakes, {
+        r: r + look.wobble + look.double,
         speed,
         topRows: (r + 3) * 3
       })
@@ -138,59 +139,97 @@ export default function Snowfall({ engine, state }) {
         base,
         speed,
         x: col,
-        // параметры эффектов — плавно догоняют текущие значения голоса
+        // параметры эффектов плавно догоняют текущие значения голоса
         lightness: look.lightness,
         wobble: look.wobble,
-        drift: look.drift,
+        double: look.double,
         tremor: look.tremor,
-        phase: Math.random() * Math.PI * 2,
+        swingAmp: 0,
+        wobblePhase: Math.random(),
+        doublePhase: Math.random(),
+        spinPhase: Math.random(),
         tremorPhase: Math.random() * Math.PI * 2,
-        driftDir: Math.random() < 0.5 ? -1 : 1
+        side: Math.random() < 0.5 ? -1 : 1
       })
-
-      // Эхо-снежинки Delay: та же форма через долю такта — зеркально
-      // на другой половине панели (Ping-Pong) или рядом
-      if (echo === 0 && !calm && look.echoes > 0) {
-        const beat = engine.beats() ?? 0
-        let from = col
-        for (let k = 1; k <= look.echoes; k++) {
-          from = echoColumn(from, cols, look.pingPong, k, Math.random())
-          pending.push({ at: beat + k * look.echoBeats, note, k, col: from })
-        }
-      }
     }
 
-    // Движение за кадр: dBeats — сколько долей прошло, travel — путь
-    // с пульсацией на долях, dt — секунды (для плавной смены эффектов)
+    // Движение и вид за кадр: dBeats — сколько долей прошло, travel —
+    // путь с пульсацией на долях, dt — секунды (для плавной смены)
     function move(flake, look, dBeats, travel, dt) {
       flake.lightness = ease(flake.lightness, look.lightness, dt)
       flake.wobble = ease(flake.wobble, calm ? 0 : look.wobble, dt)
-      flake.drift = ease(flake.drift, calm ? 0 : look.drift, dt)
+      flake.double = ease(flake.double, look.double, dt)
       flake.tremor = ease(flake.tremor, calm ? 0 : look.tremor, dt)
+      // Phaser: вращение туда-обратно, Oct — шире размах
+      const swing = look.spin > 0 ? Math.PI * (0.25 + 0.75 * look.swing) : 0
+      flake.swingAmp = ease(flake.swingAmp, calm ? 0 : swing, dt)
 
       // Pitch Shift меняет размер сразу у всех снежинок голоса
       flake.index = shapeFor(flake.voice, flake.midi, look.sizeShift)
-      flake.r = SHAPES[flake.index].r
+      flake.r = variantRadius(flake.index, look)
 
       flake.speed = flake.base * flake.lightness
       flake.row += flake.speed * (calm ? dBeats * 0.6 : travel)
 
-      // Снос Phaser: у края ветер разворачивает снежинку обратно
-      flake.col += flake.drift * flake.driftDir * dBeats
-      const inside = keepInside(flake.col, flake.r)
-      if (inside !== flake.col) {
-        flake.col = inside
-        flake.driftDir *= -1
-      }
-
-      flake.phase += Math.PI * 2 * look.wobbleRate * dBeats
+      flake.wobblePhase += look.wobbleRate * dBeats
+      flake.doublePhase += look.doubleRate * dBeats
+      flake.spinPhase += Math.max(look.spin, 0.06) * dBeats
       flake.tremorPhase += Math.PI * 2 * 6 * dBeats
+
       flake.x =
         flake.col +
-        flake.wobble * Math.sin(flake.phase) +
+        flake.wobble * Math.sin(Math.PI * 2 * flake.wobblePhase) +
         flake.tremor *
           Math.sin(flake.tremorPhase) *
           Math.sin(flake.tremorPhase * 0.37)
+      flake.angle = flake.swingAmp * Math.sin(Math.PI * 2 * flake.spinPhase)
+    }
+
+    // Рисует снежинку с центром в клетке (x, y) с поворотом angle
+    function draw(image, side, x, y, angle) {
+      const s = side * dpr
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.translate(Math.round(x * cell * dpr), Math.round(y * cell * dpr))
+      if (Math.abs(angle) > 0.001) ctx.rotate(angle)
+      ctx.drawImage(image, -Math.round(s / 2), -Math.round(s / 2), s, s)
+    }
+
+    function render(flake, look) {
+      const variant = {
+        halo: look.halo,
+        haloDotted: look.haloDotted,
+        spikes: look.spikes,
+        noise: look.noise,
+        noiseSeed: look.flicker ? Math.floor(beat * look.flicker) % 4 : 0,
+        echo: false
+      }
+      const { canvas: image, side } = sprite(flake.index, variant)
+
+      // Delay: эхо-копии над снежинкой — там, где она была долю назад
+      // (Time L / R по очереди); Ping-Pong — копии вразлёт влево и вправо
+      if (look.echoes > 0) {
+        const ghost = sprite(flake.index, { ...variant, echo: true })
+        let gap = 0
+        for (let k = 1; k <= look.echoes; k++) {
+          gap += flake.speed * look.echoBeats[(k - 1) % 2]
+          const shift = look.pingPong ? (k % 2 ? -1 : 1) * (2 + k * 2) : 0
+          draw(
+            ghost.canvas,
+            ghost.side,
+            flake.x + shift,
+            flake.row - gap,
+            flake.angle
+          )
+        }
+      }
+
+      // Chorus: двойник рядом, «дышит» — то отходит, то приближается
+      if (flake.double > 0.2) {
+        const d = flake.double * breath(look.doubleWave, flake.doublePhase)
+        draw(image, side, flake.x + flake.side * d, flake.row, -flake.angle)
+      }
+
+      draw(image, side, flake.x, flake.row, flake.angle)
     }
 
     let frame
@@ -211,12 +250,7 @@ export default function Snowfall({ engine, state }) {
         dBeats = beats - from
         travel = pulseTravel(from, beats)
         lastBeats = beats
-
-        pending = pending.filter((p) => {
-          if (p.at > beats) return true
-          launch(p.note, p.k, p.col)
-          return false
-        })
+        beat = beats
       }
 
       const looks = {}
@@ -230,14 +264,12 @@ export default function Snowfall({ engine, state }) {
       const bottom = height / cell
 
       flakes = flakes.filter((flake) => {
-        move(flake, looks[flake.voice], dBeats, travel, dt)
-        // Уходит за нижний край целиком — и всё, без затухания
-        if (flake.row - flake.r > bottom) return false
-        const { canvas: image, side } = sprite(flake.index)
-        // Плавно, но по целым точкам экрана — пиксели остаются чёткими
-        const x = Math.round((flake.x - flake.r) * cell * dpr)
-        const y = Math.round((flake.row - flake.r) * cell * dpr)
-        ctx.drawImage(image, x, y, side * dpr, side * dpr)
+        const look = looks[flake.voice]
+        move(flake, look, dBeats, travel, dt)
+        // Уходит за нижний край целиком (вместе с эхо) — и всё, без затухания
+        const tail = look.echoes > 0 ? flake.speed * 2 * look.echoes : 0
+        if (flake.row - flake.r - tail > bottom) return false
+        render(flake, look)
         return true
       })
 

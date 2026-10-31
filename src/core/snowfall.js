@@ -2,13 +2,19 @@
 // пиксельную снежинку. Снежинки плавно падают, пульсируя в такт,
 // и уходят за нижний край. Чистые функции без DOM.
 //
-// Эффекты голоса меняют только то, как снежинка падает:
-//   Vibrato, Chorus — качается влево-вправо (Depth — размах, Rate — частота);
-//   Phaser          — сносит вбок, как ветром;
-//   Reverb          — снежинка легче, падает медленнее;
-//   Delay           — следом падают эхо-снежинки (Ping-Pong — зеркально);
-//   Distortion      — тяжелее и дрожит;
-//   Pitch Shift     — снежинка крупнее (вниз) или мельче (вверх).
+// Эффекты голоса сразу меняют все его снежинки — и уже летящие тоже.
+// Каждый эффект — свой заметный знак, каждый контрол — своя черта:
+//   Pitch Shift — размер: −12 крупнее, +7 и +12 мельче;
+//   Reverb      — ореол-сияние вокруг снежинки (Decay — шире, Mix — плотнее)
+//                 и медленное падение;
+//   Distortion  — шипы на лучах и колючий шум (Drive — длиннее и больше),
+//                 дрожь; Tone — шум мерцает чаще;
+//   Chorus      — двойник рядом (Depth — дальше), который «дышит»
+//                 (Rate — чаще, Wave — плавно, рывками или прыжками);
+//   Vibrato     — раскачивание (Depth — размах, Rate — частота);
+//   Phaser      — вращение (Freq — быстрее, Oct — туда-обратно шире);
+//   Delay       — цепочка эхо-копий над снежинкой (Feedback — сколько,
+//                 Time L / R — на каком расстоянии, Ping-Pong — вразлёт).
 
 import { EFFECTS } from './effects.js'
 import { toNormal } from './scale.js'
@@ -139,6 +145,80 @@ export function shapeFor(voice, midi, sizeShift = 0) {
   return group[(midi * 7) % group.length]
 }
 
+// ---------- Вариации формы ----------
+
+// Снежинка с вариациями эффектов, клетки вокруг центра:
+//   halo       — ореол Reverb: пунктирное кольцо на halo клеток дальше
+//                лучей (0 — нет); haloDotted — реже пунктир;
+//   spikes     — шипы Distortion: лучи длиннее на spikes клеток;
+//   noise      — колючие искры Distortion вокруг (× 8 по симметрии);
+//   noiseSeed  — какой это вариант шума (шум мерцает в такт);
+//   echo       — эхо-копия Delay: каждый второй пиксель, как призрак
+export function variantCells(index, v = {}) {
+  const { halo = 0, haloDotted = false, spikes = 0, noise = 0 } = v
+  const r = SHAPES[index].r
+  const cells = shapeCells(index)
+  const seen = new Set(cells.map(([x, y]) => `${x},${y}`))
+  const add = (x, y) => {
+    const key = `${x},${y}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      cells.push([x, y])
+    }
+  }
+  const all8 = (x, y) => {
+    for (const [a, b] of [
+      [x, y],
+      [y, x]
+    ]) {
+      for (const sx of [1, -1]) for (const sy of [1, -1]) add(a * sx, b * sy)
+    }
+  }
+
+  // Шипы: лучи по осям и диагоналям продолжаются наружу
+  for (let k = 1; k <= spikes; k++) {
+    all8(r + k, 0)
+    if (k < spikes) all8(r + k, r + k)
+  }
+
+  // Ореол: пунктирное кольцо-сияние вокруг; плотнее — каждая вторая
+  // клетка кольца, реже — каждая третья
+  if (halo > 0) {
+    const R = r + halo + 1
+    const step = haloDotted ? 3 : 2
+    circle(R).forEach(([x, y], k) => {
+      if (k % step === 0) all8(x, y)
+    })
+  }
+
+  // Шум: пиксели в кольце вокруг снежинки, по сиду — свои для каждого
+  // варианта, поэтому шум «мерцает», когда вариант меняется
+  if (noise > 0) {
+    let t = ((index + 1) * 2654435761 + (v.noiseSeed ?? 0) * 40503) >>> 0
+    const next = () => {
+      t = (Math.imul(t ^ (t >>> 13), 1274126177) + 0x9e3779b9) >>> 0
+      return t / 4294967296
+    }
+    // каждая искра повторяется в восьми местах симметрии — их немного
+    for (let k = 0; k < noise; k++) {
+      const d = r + 1 + Math.round(next())
+      all8(d, Math.round(next() * d))
+    }
+  }
+
+  return v.echo ? cells.filter(([x, y]) => (x + y) % 2 === 0) : cells
+}
+
+// Радиус снежинки с вариациями — сколько места она занимает
+export function variantRadius(index, v = {}) {
+  const r = SHAPES[index].r
+  return Math.max(
+    r + (v.spikes ?? 0),
+    v.halo ? r + v.halo + 1 : r,
+    v.noise ? r + 2 : r
+  )
+}
+
 // ---------- Где появляется ----------
 
 // Кандидаты в колонки по всей ширине: случайно (rand — генератор 0…1),
@@ -183,15 +263,6 @@ export function pickColumn(candidates, flakes, { r, speed, topRows }) {
   return best
 }
 
-// Куда падает эхо Delay: при Ping-Pong — зеркально на другую половину
-// панели, иначе — рядом, на 6–12 клеток в сторону (rand — 0…1)
-export function echoColumn(col, cols, pingPong, k, rand = 0.5) {
-  if (pingPong && k % 2 === 1) return cols - 1 - col
-  const shift = 6 + Math.round(rand * 6)
-  const next = col + (rand < 0.5 ? -shift : shift)
-  return next < 0 || next >= cols ? col - (next - col) : next
-}
-
 // ---------- Вес и ритм ----------
 // Снежинки падают плавно, но скорость пульсирует в такт: на каждой доле
 // (четверти) снежинка чуть ускоряется и снова замедляется. Позиция
@@ -226,9 +297,16 @@ export function ease(current, target, dt, tau = 0.25) {
   return current + (target - current) * (1 - Math.exp(-dt / tau))
 }
 
-// ---------- Эффекты голоса → падение ----------
-// Эффекты меняют уже падающие снежинки сразу: подключили ноду или
-// покрутили контрол — снег этого голоса плавно перестраивается.
+// «Дыхание» двойника Chorus по форме волны Wave: 0…1 за фазу 0…1
+export function breath(wave, phase) {
+  const p = phase - Math.floor(phase)
+  if (wave === 'triangle') return 1 - Math.abs(2 * p - 1)
+  if (wave === 'square') return p < 0.5 ? 1 : 0.25
+  return (1 - Math.cos(2 * Math.PI * p)) / 2
+}
+
+// ---------- Эффекты голоса ----------
+// Эффекты меняют снежинки голоса сразу, и уже летящие тоже.
 
 function norm(node, param) {
   return toNormal(node.settings[param], EFFECTS[node.type].params[param])
@@ -236,63 +314,94 @@ function norm(node, param) {
 
 const BEATS = { '8n': 0.5, '4n': 1, '2n': 2 }
 
-// Как падают снежинки голоса при текущих эффектах. Вклад каждой
-// подключённой ноды — с весом её Mix
+// Как выглядят и летят снежинки голоса при текущих эффектах
 export function voiceLook(state, voice) {
   const look = {
-    wobble: 0, // размах качания, клеток
-    wobbleRate: 0.25, // качаний за долю
-    drift: 0, // снос вбок, клеток за долю
+    sizeShift: 0, // Pitch Shift: ступень размера
+    halo: 0, // Reverb: ширина ореола, клеток
+    haloDotted: false,
     lightness: 1, // множитель скорости: < 1 — медленнее
-    echoes: 0, // число эхо-снежинок
-    echoBeats: 1, // промежуток между эхо, в долях
-    pingPong: false,
-    tremor: 0, // дрожь, клеток
-    sizeShift: 0
+    spikes: 0, // Distortion: длина шипов
+    noise: 0, // Distortion: пикселей шума
+    flicker: 0, // Distortion: смен шума за долю
+    tremor: 0, // Distortion: дрожь, клеток
+    double: 0, // Chorus: расстояние до двойника, клеток
+    doubleRate: 0, // Chorus: «вдохов» за долю
+    doubleWave: 'sine',
+    wobble: 0, // Vibrato: размах качания, клеток
+    wobbleRate: 0.25, // Vibrato: качаний за долю
+    spin: 0, // Phaser: оборотов за долю
+    swing: 0, // Phaser: размах вращения туда-обратно (0 — по кругу)
+    echoes: 0, // Delay: эхо-копий
+    echoBeats: [1, 1], // Delay: промежутки L / R, в долях
+    pingPong: false
   }
 
   nodesOfVoice(state, voice).forEach((id) => {
     const node = state.nodes[id]
     const mix = node.settings.mix
     if (!(mix > 0)) return
+    const strong = Math.min(1, mix * 1.6)
 
     switch (node.type) {
-      case 'vibrato':
+      case 'pitchShift':
+        if (mix >= 0.15) look.sizeShift = node.settings.interval < 0 ? 1 : -1
+        break
+      case 'reverb':
+        look.halo = Math.max(look.halo, 1 + Math.round(node.settings.decay))
+        look.haloDotted = mix < 0.5
+        look.lightness *= 1 - 0.5 * strong * (0.3 + 0.7 * node.settings.decay)
+        break
+      case 'distortion': {
+        const drive = norm(node, 'drive')
+        look.spikes = Math.max(look.spikes, 1 + Math.round(drive * 2 * strong))
+        look.noise = Math.max(look.noise, Math.round((1 + drive * 2) * strong))
+        look.flicker = Math.max(
+          look.flicker,
+          1 + Math.round(norm(node, 'tone') * 3)
+        )
+        look.tremor = Math.max(look.tremor, strong * (0.3 + drive))
+        look.lightness *= 1 + 0.4 * strong * drive
+        break
+      }
       case 'chorus':
+        look.double = Math.max(
+          look.double,
+          strong * (2 + 5 * norm(node, 'depth'))
+        )
+        look.doubleRate = Math.max(
+          look.doubleRate,
+          0.25 + norm(node, 'rate') * 1.5
+        )
+        look.doubleWave = node.settings.wave
+        break
+      case 'vibrato':
         look.wobble = Math.max(
           look.wobble,
-          mix * (1.5 + 5 * norm(node, 'depth'))
+          strong * (1.5 + 6 * norm(node, 'depth'))
         )
         look.wobbleRate = Math.max(
           look.wobbleRate,
-          0.15 + 1.1 * norm(node, 'rate')
+          0.2 + norm(node, 'rate') * 1.6
         )
         break
       case 'phaser':
-        look.drift = Math.max(
-          look.drift,
-          mix * (0.6 + 2.4 * norm(node, 'freq'))
+        look.spin = Math.max(
+          look.spin,
+          strong * (0.06 + 0.4 * norm(node, 'freq'))
         )
-        break
-      case 'reverb':
-        look.lightness *= 1 - 0.55 * mix * (0.3 + 0.7 * node.settings.decay)
+        look.swing = Math.max(look.swing, norm(node, 'oct'))
         break
       case 'delay':
         look.echoes = Math.max(
           look.echoes,
-          Math.round(1 + node.settings.feedback * 1.5 * Math.min(1, mix * 2))
+          1 + Math.round(node.settings.feedback * strong)
         )
-        look.echoBeats = BEATS[node.settings.timeL] ?? 1
+        look.echoBeats = [
+          BEATS[node.settings.timeL] ?? 1,
+          BEATS[node.settings.timeR] ?? 1
+        ]
         look.pingPong = node.settings.pingPong
-        break
-      case 'distortion': {
-        const drive = mix * (0.3 + 0.7 * norm(node, 'drive'))
-        look.lightness *= 1 + 0.6 * drive
-        look.tremor = Math.max(look.tremor, drive * 1.2)
-        break
-      }
-      case 'pitchShift':
-        if (mix >= 0.3) look.sizeShift = node.settings.interval < 0 ? 1 : -1
         break
     }
   })
