@@ -6,7 +6,7 @@
 //   Vibrato, Chorus — качается влево-вправо на клетку-другую;
 //   Phaser          — сносит вбок, как ветром;
 //   Reverb          — снежинка легче, падает медленнее;
-//   Delay           — следом падают эхо-снежинки (Ping-Pong — вразлёт);
+//   Delay           — следом падают эхо-снежинки (Ping-Pong — зеркально);
 //   Distortion      — тяжелее и дёргается;
 //   Pitch Shift     — снежинка крупнее (вниз) или мельче (вверх).
 
@@ -139,27 +139,78 @@ export function shapeFor(voice, midi, sizeShift = 0) {
   return group[(midi * 7) % group.length]
 }
 
-// Где снежинка появляется по ширине, 0…1: в основном случайно (r — 0…1),
-// низкие ноты чуть левее, высокие правее, панорама голоса — сдвиг вбок
-export function spawnX(midi, pan = 0, r = 0.5) {
-  const t = (midi - 29) / (77 - 29)
-  return Math.min(
-    0.9,
-    Math.max(0.1, 0.1 + 0.8 * (0.25 * t + 0.75 * r) + pan * 0.12)
-  )
+// ---------- Где появляется ----------
+
+// Кандидаты в колонки по всей ширине: случайно (rand — генератор 0…1),
+// с небольшим сдвигом по панораме голоса. Отступ — чтобы снежинка
+// с качанием не заходила на закруглённые края панели
+export function candidateColumns(
+  cols,
+  r,
+  pan = 0,
+  rand = Math.random,
+  count = 12
+) {
+  const margin = r + 4
+  const span = cols - margin * 2 - 1
+  return Array.from({ length: count }, () => {
+    const t = Math.min(1, Math.max(0, rand() + pan * 0.12))
+    return margin + Math.round(t * span)
+  })
 }
 
-// ---------- Вес ----------
+// Выбор колонки, где новой снежинке просторнее всего. Мешают ей
+// снежинки у верхнего края (любые) и те, что ниже, но медленнее, —
+// новая их догонит и наслоится. Просвет больше 10 клеток уже не важен,
+// поэтому среди свободных мест выбор остаётся случайным
+export function pickColumn(candidates, flakes, { r, speed, topRows }) {
+  let best = candidates[0]
+  let bestScore = -Infinity
+  candidates.forEach((col) => {
+    let clearance = 10
+    flakes.forEach((f) => {
+      const nearTop = f.row - f.r < topRows
+      const caught = f.speed < speed
+      if (!nearTop && !caught) return
+      const gap = Math.abs(f.col - col) - f.r - r - (f.wobble ?? 0)
+      clearance = Math.min(clearance, gap)
+    })
+    if (clearance > bestScore) {
+      bestScore = clearance
+      best = col
+    }
+  })
+  return best
+}
+
+// Куда падает эхо Delay: при Ping-Pong — зеркально на другую половину
+// панели, иначе — рядом, на 6–12 клеток в сторону (rand — 0…1)
+export function echoColumn(col, cols, pingPong, k, rand = 0.5) {
+  if (pingPong && k % 2 === 1) return cols - 1 - col
+  const shift = 6 + Math.round(rand * 6)
+  const next = col + (rand < 0.5 ? -shift : shift)
+  return next < 0 || next >= cols ? col - (next - col) : next
+}
+
+// ---------- Вес и ритм ----------
+// Снежинки шагают вниз на каждую шестнадцатую долю такта, а на каждую
+// долю (четверть) — на клетку дальше: падение пульсирует в такт музыке.
+// Темп задаёт сам синтезатор, поэтому быстрее музыка — быстрее снег.
 
 // Вес снежинки: крупнее — тяжелее, плюс своя случайная добавка
-// (r — 0…1). Тяжёлая падает быстрее
+// (r — 0…1)
 export function weightOf(index, r = 0.5) {
   return 0.6 + SHAPES[index].r * 0.12 + r * 0.5
 }
 
-// Сколько секунд между шагами вниз на одну клетку
-export function stepSeconds(weight, lightness = 1) {
-  return 0.075 / (weight * lightness)
+// Клеток за шестнадцатую: тяжёлая падает быстрее
+export function cellsPerStep(weight, lightness = 1) {
+  return Math.min(5, Math.max(1, Math.round(weight * lightness * 2.2)))
+}
+
+// Шаг на шестнадцатой с номером index: на сильной доле — на клетку больше
+export function stepCells(speed, index) {
+  return speed + (index % 4 === 0 ? 1 : 0)
 }
 
 // ---------- Эффекты голоса → падение ----------

@@ -301,6 +301,14 @@ export function createEngine() {
     return `${(Number(bar) % 4) + 1}:${Number(beat) + 1}`
   }
 
+  // Позиция в долях такта (четвертях) «сейчас», без упреждения
+  // планировщика — по ней снегопад шагает в такт; null, если стоит
+  function beats() {
+    const transport = Tone.getTransport()
+    if (transport.state !== 'started') return null
+    return transport.getTicksAtTime(Tone.immediate()) / transport.PPQ
+  }
+
   // Уровень на выходе 0–1 (для индикатора)
   function level() {
     return meter ? meter.getValue() : 0
@@ -316,6 +324,7 @@ export function createEngine() {
     graphInfo,
     isPlaying,
     position,
+    beats,
     level,
     voices
   }

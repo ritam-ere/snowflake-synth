@@ -2,10 +2,13 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   SHAPES,
+  candidateColumns,
+  cellsPerStep,
+  echoColumn,
+  pickColumn,
   shapeCells,
   shapeFor,
-  spawnX,
-  stepSeconds,
+  stepCells,
   voiceLook,
   weightOf
 } from './snowfall.js'
@@ -70,22 +73,55 @@ describe('нота → снежинка', () => {
     expect(SHAPES[shapeFor('bass', 33, 1)].r).toBeGreaterThanOrEqual(4)
   })
 
-  test('снежинка появляется внутри панели, панорама сдвигает её вбок', () => {
-    for (const r of [0, 0.5, 1]) {
-      const x = spawnX(50, 0, r)
-      expect(x).toBeGreaterThanOrEqual(0.1)
-      expect(x).toBeLessThanOrEqual(0.9)
-    }
-    expect(spawnX(50, -1, 0.5)).toBeLessThan(spawnX(50, 1, 0.5))
+  test('тяжёлая снежинка падает быстрее лёгкой', () => {
+    const big = SHAPES.findIndex((sh) => sh.r === 5)
+    const small = SHAPES.findIndex((sh) => sh.r === 1)
+    expect(weightOf(big, 1)).toBeGreaterThan(weightOf(small, 0))
+    expect(cellsPerStep(weightOf(big, 1))).toBeGreaterThan(
+      cellsPerStep(weightOf(small, 0))
+    )
+    expect(cellsPerStep(weightOf(big, 1), 0.5)).toBeLessThan(
+      cellsPerStep(weightOf(big, 1))
+    )
+  })
+})
+
+describe('ритм', () => {
+  test('на сильной доле шаг на клетку шире', () => {
+    expect(stepCells(2, 0)).toBe(3)
+    expect(stepCells(2, 1)).toBe(2)
+    expect(stepCells(2, 4)).toBe(3)
+  })
+})
+
+describe('где появляется', () => {
+  test('кандидаты — по всей ширине, но с отступом от краёв', () => {
+    let k = 0
+    const rand = () => [0, 0.5, 1][k++ % 3]
+    const cols = candidateColumns(60, 3, 0, rand, 3)
+    expect(cols[0]).toBe(7)
+    expect(cols[2]).toBe(60 - 7 - 1)
+    expect(cols[1]).toBeGreaterThan(20)
   })
 
-  test('тяжёлая снежинка падает быстрее лёгкой', () => {
-    const big = SHAPES.findIndex((s) => s.r === 5)
-    const small = SHAPES.findIndex((s) => s.r === 1)
-    expect(weightOf(big, 0.5)).toBeGreaterThan(weightOf(small, 0.5))
-    expect(stepSeconds(weightOf(big, 0.5))).toBeLessThan(
-      stepSeconds(weightOf(small, 0.5))
-    )
+  test('новая снежинка не встаёт под медленную и не слипается у верхнего края', () => {
+    const flakes = [
+      { col: 10, r: 3, row: 80, speed: 1 }, // ниже и медленнее — догонит
+      { col: 30, r: 3, row: 2, speed: 3 }, // у верхнего края
+      { col: 50, r: 3, row: 80, speed: 4 } // ниже и быстрее — не мешает
+    ]
+    const options = { r: 3, speed: 2, topRows: 18 }
+    expect(pickColumn([10, 30, 50], flakes, options)).toBe(50)
+    expect(pickColumn([10, 30, 20], flakes, options)).toBe(20)
+  })
+
+  test('эхо Ping-Pong — зеркально, без Ping-Pong — рядом и внутри панели', () => {
+    expect(echoColumn(10, 60, true, 1)).toBe(49)
+    const near = echoColumn(30, 60, false, 1, 0.2)
+    expect(Math.abs(near - 30)).toBeGreaterThanOrEqual(6)
+    expect(Math.abs(near - 30)).toBeLessThanOrEqual(12)
+    const edge = echoColumn(2, 60, false, 1, 0.1)
+    expect(edge).toBeGreaterThanOrEqual(0)
   })
 })
 
