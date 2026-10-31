@@ -24,7 +24,12 @@ import { VOICE_IDS } from '../../core/voices.js'
 // эффект или покрутили контрол — снег плавно перестраивается.
 // Все снежинки пока белые.
 
-const MAX_FLAKES = 70
+// Сколько снежинок может лететь одновременно. Летящие снежинки никогда
+// не убираются раньше времени — каждая долетает до низа и уходит за край.
+// Когда эффекты замедляют снег (Reverb) или добавляют эхо (Delay), на
+// экране становится теснее: тогда реже выпускаем новые
+const CROWDED = 55 // дальше эхо Delay не выпускается
+const FULL = 80 // дальше не выпускается ничего, пока снег не поредеет
 // Не чаще одной снежинки за столько секунд от голоса: бас играет
 // часто, иначе снег слипается в сугроб
 const MIN_GAP = { lead: 0.4, bass: 0.8, extra: 0.5 }
@@ -93,12 +98,18 @@ export default function Snowfall({ engine, state }) {
     }
 
     function launch(note, echo = 0, near = null) {
+      const look = voiceLook(stateRef.current, note.voice)
       if (echo === 0) {
         if (now - (lastLaunch[note.voice] ?? -1) < MIN_GAP[note.voice]) return
+        if (flakes.length >= FULL) return
+        // Медленный снег живёт дольше — выпускаем его реже, чтобы
+        // плотность по всей высоте оставалась ровной
+        if (Math.random() > Math.min(1, look.lightness)) return
         lastLaunch[note.voice] = now
+      } else if (flakes.length >= CROWDED) {
+        return
       }
 
-      const look = voiceLook(stateRef.current, note.voice)
       const pan = stateRef.current.voices[note.voice].pan
       const index = shapeFor(note.voice, note.midi, look.sizeShift)
       const r = SHAPES[index].r
@@ -136,7 +147,6 @@ export default function Snowfall({ engine, state }) {
         tremorPhase: Math.random() * Math.PI * 2,
         driftDir: Math.random() < 0.5 ? -1 : 1
       })
-      if (flakes.length > MAX_FLAKES) flakes.shift()
 
       // Эхо-снежинки Delay: та же форма через долю такта — зеркально
       // на другой половине панели (Ping-Pong) или рядом
