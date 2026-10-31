@@ -35,6 +35,8 @@ async function loadMidi(url) {
 export function createEngine() {
   const voices = {}
   const listeners = new Set()
+  // Подписчики на ноты (снегопад в панели слева)
+  const noteListeners = new Set()
   // Звучащие эффекты: ключ экземпляра → эффект
   const instances = new Map()
   // Посылы голосов в эффекты: ключ посыла → Gain
@@ -56,6 +58,29 @@ export function createEngine() {
   function onStatus(listener) {
     listeners.add(listener)
     return () => listeners.delete(listener)
+  }
+
+  // ---------- Ноты для визуализации ----------
+
+  // Слушатель получает { voice, midi, velocity, bpm } в момент, когда
+  // нота звучит: Tone.Draw переносит вызов из аудиопотока в кадр
+  // анимации. Заглушённый голос нот не отдаёт
+  function onNote(listener) {
+    noteListeners.add(listener)
+    return () => noteListeners.delete(listener)
+  }
+
+  function emitNote(id, event, time) {
+    if (noteListeners.size === 0 || voices[id].channel.mute) return
+    const note = {
+      voice: id,
+      midi: event.midi,
+      velocity: event.velocity,
+      bpm: Tone.getTransport().bpm.value
+    }
+    Tone.getDraw().schedule(() => {
+      noteListeners.forEach((listener) => listener(note))
+    }, time)
   }
 
   // ---------- Загрузка ----------
@@ -95,6 +120,7 @@ export function createEngine() {
             time,
             event.velocity
           )
+          emitNote(id, event, time)
         },
         midiToEvents(midi, transport.PPQ)
       )
@@ -286,6 +312,7 @@ export function createEngine() {
     stop,
     update,
     onStatus,
+    onNote,
     graphInfo,
     isPlaying,
     position,

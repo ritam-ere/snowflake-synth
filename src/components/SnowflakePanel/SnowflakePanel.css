@@ -19,18 +19,7 @@
 
 .SnowflakePanel-toggle {
   position: absolute;
+  z-index: 1;
   top: 12px;
   right: 12px;
-}
-
-/* Клин-драфт: заготовка снежинки, центр чуть ниже середины панели */
-.SnowflakePanel-wedge {
-  display: block;
-  flex: none;
-  margin-top: 34px;
-  transition: opacity var(--panel-duration) var(--panel-easing);
-}
-
-.SnowflakePanel.is-closed .SnowflakePanel-wedge {
-  opacity: 0;
 }

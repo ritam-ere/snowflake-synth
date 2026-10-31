@@ -86,6 +86,7 @@ describe('События для Tone.Part', () => {
     expect(events[0]).toEqual({
       time: '0i',
       note: 'F1',
+      midi: 29,
       duration: '48i',
       velocity: 0.748
     })
