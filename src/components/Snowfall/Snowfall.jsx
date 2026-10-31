@@ -3,23 +3,26 @@ import React, { useEffect, useRef } from 'react'
 import {
   SHAPES,
   candidateColumns,
-  cellsPerStep,
+  cellsPerBeat,
+  ease,
   echoColumn,
   pickColumn,
+  pulseTravel,
   shapeCells,
   shapeFor,
-  stepCells,
   voiceLook,
   weightOf
 } from '../../core/snowfall.js'
+import { VOICE_IDS } from '../../core/voices.js'
 
 // Снегопад в панели слева (прототип). Каждая нота голоса выпускает
-// пиксельную снежинку; она падает по сетке ступеньками, как фигура
-// в тетрисе, и уходит за нижний край. Шаги идут по шестнадцатым долям
-// такта синтезатора, на сильных долях — шире: снег качается в ритм.
+// пиксельную снежинку; она плавно падает и уходит за нижний край.
+// Скорость пульсирует на долях такта синтезатора — снег идёт в ритм.
 // У каждой снежинки свой вес: тяжёлые падают быстрее. Новая снежинка
 // выбирает место, где ни с кем не столкнётся. Эффекты голоса меняют
-// только падение (core/snowfall.js). Все снежинки пока белые.
+// падение (core/snowfall.js), и уже летящие снежинки тоже: подключили
+// эффект или покрутили контрол — снег плавно перестраивается.
+// Все снежинки пока белые.
 
 const MAX_FLAKES = 70
 // Не чаще одной снежинки за столько секунд от голоса: бас играет
@@ -61,10 +64,9 @@ export default function Snowfall({ engine, state }) {
     let dpr = 1
     let cell = 5
     let now = 0
-    let lastSixteenth = null
+    let lastBeats = null
 
     const columns = () => Math.floor(width / cell)
-    const rows = () => Math.ceil(height / cell)
 
     function resize() {
       const rect = canvas.getBoundingClientRect()
@@ -101,8 +103,8 @@ export default function Snowfall({ engine, state }) {
       const index = shapeFor(note.voice, note.midi, look.sizeShift)
       const r = SHAPES[index].r
       const cols = columns()
-      const speed = cellsPerStep(weightOf(index, Math.random()), look.lightness)
-      const wobble = calm ? 0 : look.wobble
+      const base = cellsPerBeat(weightOf(index, Math.random()))
+      const speed = base * look.lightness
 
       // Кандидаты — по всей ширине, а для эха — рядом с его местом
       const candidates =
@@ -110,25 +112,29 @@ export default function Snowfall({ engine, state }) {
           ? candidateColumns(cols, r, pan)
           : [-2, -1, 0, 1, 2].map((d) => keepInside(near + d * 2, r))
       const col = pickColumn(candidates, flakes, {
-        r: r + wobble,
+        r: r + look.wobble,
         speed,
         topRows: (r + 3) * 3
       })
 
       flakes.push({
+        voice: note.voice,
+        midi: note.midi,
         index,
         r,
         col,
         row: -r - 1,
-        speed: calm ? 1 : speed,
-        steps: 0,
-        offset: 0,
-        wobble,
-        wobbleSteps: look.wobbleSteps,
-        phase: Math.floor(Math.random() * 4 * look.wobbleSteps),
-        drift: calm ? 0 : look.drift,
-        driftDir: Math.random() < 0.5 ? -1 : 1,
-        jitter: calm ? 0 : look.jitter
+        base,
+        speed,
+        x: col,
+        // параметры эффектов — плавно догоняют текущие значения голоса
+        lightness: look.lightness,
+        wobble: look.wobble,
+        drift: look.drift,
+        tremor: look.tremor,
+        phase: Math.random() * Math.PI * 2,
+        tremorPhase: Math.random() * Math.PI * 2,
+        driftDir: Math.random() < 0.5 ? -1 : 1
       })
       if (flakes.length > MAX_FLAKES) flakes.shift()
 
@@ -144,47 +150,57 @@ export default function Snowfall({ engine, state }) {
       }
     }
 
-    // Шаг вниз на шестнадцатой доле; качание, снос и рывки — по клеткам
-    function stepDown(flake, sixteenth) {
-      flake.row += stepCells(flake.speed, sixteenth)
-      flake.steps += 1
-      let offset = 0
-      if (flake.wobble > 0) {
-        const t = (flake.steps + flake.phase) / (2 * flake.wobbleSteps)
-        offset = Math.round(flake.wobble * Math.sin(Math.PI * 2 * t))
+    // Движение за кадр: dBeats — сколько долей прошло, travel — путь
+    // с пульсацией на долях, dt — секунды (для плавной смены эффектов)
+    function move(flake, look, dBeats, travel, dt) {
+      flake.lightness = ease(flake.lightness, look.lightness, dt)
+      flake.wobble = ease(flake.wobble, calm ? 0 : look.wobble, dt)
+      flake.drift = ease(flake.drift, calm ? 0 : look.drift, dt)
+      flake.tremor = ease(flake.tremor, calm ? 0 : look.tremor, dt)
+
+      // Pitch Shift меняет размер сразу у всех снежинок голоса
+      flake.index = shapeFor(flake.voice, flake.midi, look.sizeShift)
+      flake.r = SHAPES[flake.index].r
+
+      flake.speed = flake.base * flake.lightness
+      flake.row += flake.speed * (calm ? dBeats * 0.6 : travel)
+
+      // Снос Phaser: у края ветер разворачивает снежинку обратно
+      flake.col += flake.drift * flake.driftDir * dBeats
+      const inside = keepInside(flake.col, flake.r)
+      if (inside !== flake.col) {
+        flake.col = inside
+        flake.driftDir *= -1
       }
-      if (flake.drift > 0 && flake.steps % flake.drift === 0) {
-        const next = keepInside(flake.col + flake.driftDir, flake.r)
-        // упёрлась в край — ветер разворачивает её обратно
-        if (next === flake.col) flake.driftDir *= -1
-        flake.col = next
-      }
-      if (flake.jitter > 0 && Math.random() < flake.jitter) {
-        offset += Math.random() < 0.5 ? -1 : 1
-      }
-      flake.offset = offset
+
+      flake.phase += Math.PI * 2 * look.wobbleRate * dBeats
+      flake.tremorPhase += Math.PI * 2 * 6 * dBeats
+      flake.x =
+        flake.col +
+        flake.wobble * Math.sin(flake.phase) +
+        flake.tremor *
+          Math.sin(flake.tremorPhase) *
+          Math.sin(flake.tremorPhase * 0.37)
     }
 
     let frame
     let last = performance.now()
 
     function tick(time) {
-      now += Math.min(0.05, (time - last) / 1000)
+      const dt = Math.min(0.05, (time - last) / 1000)
       last = time
+      now += dt
 
-      // Сколько шестнадцатых прошло с прошлого кадра — столько шагов
+      // Ход транспорта за кадр; после свёрнутой вкладки — не больше доли
       const beats = engine.beats()
+      let dBeats = 0
+      let travel = 0
       if (beats !== null) {
-        const sixteenth = Math.floor(beats * 4)
-        if (lastSixteenth === null || sixteenth < lastSixteenth) {
-          lastSixteenth = sixteenth
-        }
-        // после свёрнутой вкладки не догоняем больше двух долей
-        const from = Math.max(lastSixteenth + 1, sixteenth - 8)
-        for (let i = from; i <= sixteenth; i++) {
-          flakes.forEach((flake) => stepDown(flake, i))
-        }
-        lastSixteenth = sixteenth
+        if (lastBeats === null || beats < lastBeats) lastBeats = beats
+        const from = Math.max(lastBeats, beats - 1)
+        dBeats = beats - from
+        travel = pulseTravel(from, beats)
+        lastBeats = beats
 
         pending = pending.filter((p) => {
           if (p.at > beats) return true
@@ -193,18 +209,25 @@ export default function Snowfall({ engine, state }) {
         })
       }
 
+      const looks = {}
+      VOICE_IDS.forEach((voice) => {
+        looks[voice] = voiceLook(stateRef.current, voice)
+      })
+
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.imageSmoothingEnabled = false
-      const bottom = rows()
+      const bottom = height / cell
 
       flakes = flakes.filter((flake) => {
+        move(flake, looks[flake.voice], dBeats, travel, dt)
         // Уходит за нижний край целиком — и всё, без затухания
         if (flake.row - flake.r > bottom) return false
         const { canvas: image, side } = sprite(flake.index)
-        const x = (flake.col + flake.offset - flake.r) * cell
-        const y = (flake.row - flake.r) * cell
-        ctx.drawImage(image, x * dpr, y * dpr, side * dpr, side * dpr)
+        // Плавно, но по целым точкам экрана — пиксели остаются чёткими
+        const x = Math.round((flake.x - flake.r) * cell * dpr)
+        const y = Math.round((flake.row - flake.r) * cell * dpr)
+        ctx.drawImage(image, x, y, side * dpr, side * dpr)
         return true
       })
 

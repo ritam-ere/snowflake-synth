@@ -3,12 +3,14 @@ import { describe, expect, test } from 'bun:test'
 import {
   SHAPES,
   candidateColumns,
-  cellsPerStep,
+  PULSE,
+  cellsPerBeat,
+  ease,
   echoColumn,
   pickColumn,
+  pulseTravel,
   shapeCells,
   shapeFor,
-  stepCells,
   voiceLook,
   weightOf
 } from './snowfall.js'
@@ -77,20 +79,32 @@ describe('нота → снежинка', () => {
     const big = SHAPES.findIndex((sh) => sh.r === 5)
     const small = SHAPES.findIndex((sh) => sh.r === 1)
     expect(weightOf(big, 1)).toBeGreaterThan(weightOf(small, 0))
-    expect(cellsPerStep(weightOf(big, 1))).toBeGreaterThan(
-      cellsPerStep(weightOf(small, 0))
-    )
-    expect(cellsPerStep(weightOf(big, 1), 0.5)).toBeLessThan(
-      cellsPerStep(weightOf(big, 1))
+    expect(cellsPerBeat(weightOf(big, 1))).toBeGreaterThan(
+      cellsPerBeat(weightOf(small, 0))
     )
   })
 })
 
-describe('ритм', () => {
-  test('на сильной доле шаг на клетку шире', () => {
-    expect(stepCells(2, 0)).toBe(3)
-    expect(stepCells(2, 1)).toBe(2)
-    expect(stepCells(2, 4)).toBe(3)
+describe('ритм и плавность', () => {
+  test('за целую долю путь ровно одна доля, внутри доли — пульс', () => {
+    expect(pulseTravel(3, 4)).toBeCloseTo(1)
+    // сразу после доли снежинка движется быстрее, перед следующей — медленнее
+    expect(pulseTravel(0, 0.1)).toBeGreaterThan(0.1)
+    expect(pulseTravel(0.4, 0.5)).toBeLessThan(0.1)
+  })
+
+  test('движение монотонное: снежинка никогда не останавливается и не идёт вверх', () => {
+    expect(PULSE).toBeLessThan(1)
+    for (let b = 0; b < 2; b += 0.05) {
+      expect(pulseTravel(b, b + 0.05)).toBeGreaterThan(0)
+    }
+  })
+
+  test('параметры эффектов меняются плавно, без скачков', () => {
+    const half = ease(0, 1, 0.25)
+    expect(half).toBeGreaterThan(0.5)
+    expect(half).toBeLessThan(0.7)
+    expect(ease(0, 1, 0.016)).toBeLessThan(0.1)
   })
 })
 
@@ -149,7 +163,7 @@ describe('эффекты голоса → падение', () => {
       drift: 0,
       lightness: 1,
       echoes: 0,
-      jitter: 0,
+      tremor: 0,
       sizeShift: 0
     })
   })
@@ -160,10 +174,25 @@ describe('эффекты голоса → падение', () => {
     expect(lookWith('phaser').drift).toBeGreaterThan(0)
     expect(lookWith('reverb').lightness).toBeLessThan(1)
     expect(lookWith('delay').echoes).toBeGreaterThan(0)
-    expect(lookWith('distortion').jitter).toBeGreaterThan(0)
+    expect(lookWith('distortion').tremor).toBeGreaterThan(0)
     expect(lookWith('distortion').lightness).toBeGreaterThan(1)
     expect(lookWith('pitchShift', { interval: -12 }).sizeShift).toBe(1)
     expect(lookWith('pitchShift', { interval: 12 }).sizeShift).toBe(-1)
+  })
+
+  test('контролы меняют падение плавно по значению', () => {
+    expect(lookWith('vibrato', { depth: 1 }).wobble).toBeGreaterThan(
+      lookWith('vibrato', { depth: 0.1 }).wobble
+    )
+    expect(lookWith('vibrato', { rate: 10 }).wobbleRate).toBeGreaterThan(
+      lookWith('vibrato', { rate: 1 }).wobbleRate
+    )
+    expect(lookWith('reverb', { decay: 1 }).lightness).toBeLessThan(
+      lookWith('reverb', { decay: 0 }).lightness
+    )
+    expect(lookWith('phaser', { mix: 1 }).drift).toBeGreaterThan(
+      lookWith('phaser', { mix: 0.2 }).drift
+    )
   })
 
   test('Mix 0 — эффект на падение не влияет', () => {

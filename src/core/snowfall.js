@@ -1,13 +1,13 @@
 // Снегопад в панели слева (прототип): каждая сыгранная нота выпускает
-// пиксельную снежинку. Снежинки падают по сетке ступеньками, как фигуры
-// в тетрисе, и уходят за нижний край. Чистые функции без DOM.
+// пиксельную снежинку. Снежинки плавно падают, пульсируя в такт,
+// и уходят за нижний край. Чистые функции без DOM.
 //
 // Эффекты голоса меняют только то, как снежинка падает:
-//   Vibrato, Chorus — качается влево-вправо на клетку-другую;
+//   Vibrato, Chorus — качается влево-вправо (Depth — размах, Rate — частота);
 //   Phaser          — сносит вбок, как ветром;
 //   Reverb          — снежинка легче, падает медленнее;
 //   Delay           — следом падают эхо-снежинки (Ping-Pong — зеркально);
-//   Distortion      — тяжелее и дёргается;
+//   Distortion      — тяжелее и дрожит;
 //   Pitch Shift     — снежинка крупнее (вниз) или мельче (вверх).
 
 import { EFFECTS } from './effects.js'
@@ -193,9 +193,10 @@ export function echoColumn(col, cols, pingPong, k, rand = 0.5) {
 }
 
 // ---------- Вес и ритм ----------
-// Снежинки шагают вниз на каждую шестнадцатую долю такта, а на каждую
-// долю (четверть) — на клетку дальше: падение пульсирует в такт музыке.
-// Темп задаёт сам синтезатор, поэтому быстрее музыка — быстрее снег.
+// Снежинки падают плавно, но скорость пульсирует в такт: на каждой доле
+// (четверти) снежинка чуть ускоряется и снова замедляется. Позиция
+// считается от транспорта синтезатора, поэтому быстрее музыка —
+// быстрее снег, и снег не отстаёт от звука.
 
 // Вес снежинки: крупнее — тяжелее, плюс своя случайная добавка
 // (r — 0…1)
@@ -203,17 +204,31 @@ export function weightOf(index, r = 0.5) {
   return 0.6 + SHAPES[index].r * 0.12 + r * 0.5
 }
 
-// Клеток за шестнадцатую: тяжёлая падает быстрее
-export function cellsPerStep(weight, lightness = 1) {
-  return Math.min(5, Math.max(1, Math.round(weight * lightness * 2.2)))
+// Скорость в клетках за долю: тяжёлая падает быстрее
+export function cellsPerBeat(weight) {
+  return weight * 9
 }
 
-// Шаг на шестнадцатой с номером index: на сильной доле — на клетку больше
-export function stepCells(speed, index) {
-  return speed + (index % 4 === 0 ? 1 : 0)
+// Насколько сильно скорость пульсирует на долях: 0 — ровно,
+// 1 — до полной остановки между долями
+export const PULSE = 0.6
+
+// Путь за отрезок времени, в долях «ровного» падения. Скорость
+// 1 + PULSE·cos(2π·доля) — максимум точно на доле; интеграл даёт
+// плавное движение без рывков
+export function pulseTravel(fromBeat, toBeat) {
+  const wave = (b) => (PULSE * Math.sin(2 * Math.PI * b)) / (2 * Math.PI)
+  return toBeat - fromBeat + wave(toBeat) - wave(fromBeat)
+}
+
+// Плавный подход параметра к цели: за время tau проходит ≈63% пути
+export function ease(current, target, dt, tau = 0.25) {
+  return current + (target - current) * (1 - Math.exp(-dt / tau))
 }
 
 // ---------- Эффекты голоса → падение ----------
+// Эффекты меняют уже падающие снежинки сразу: подключили ноду или
+// покрутили контрол — снег этого голоса плавно перестраивается.
 
 function norm(node, param) {
   return toNormal(node.settings[param], EFFECTS[node.type].params[param])
@@ -226,13 +241,13 @@ const BEATS = { '8n': 0.5, '4n': 1, '2n': 2 }
 export function voiceLook(state, voice) {
   const look = {
     wobble: 0, // размах качания, клеток
-    wobbleSteps: 6, // шагов вниз на одно качание
-    drift: 0, // снос вбок: клетка на столько шагов вниз (0 — нет)
+    wobbleRate: 0.25, // качаний за долю
+    drift: 0, // снос вбок, клеток за долю
     lightness: 1, // множитель скорости: < 1 — медленнее
     echoes: 0, // число эхо-снежинок
-    echoBeats: 1, // промежуток между эхо, в долях такта
+    echoBeats: 1, // промежуток между эхо, в долях
     pingPong: false,
-    jitter: 0, // вероятность дёрнуться вбок на шаге
+    tremor: 0, // дрожь, клеток
     sizeShift: 0
   }
 
@@ -246,18 +261,21 @@ export function voiceLook(state, voice) {
       case 'chorus':
         look.wobble = Math.max(
           look.wobble,
-          Math.round(mix * (1 + 2 * norm(node, 'depth')))
+          mix * (1.5 + 5 * norm(node, 'depth'))
         )
-        look.wobbleSteps = Math.min(
-          look.wobbleSteps,
-          Math.round(8 - 5 * norm(node, 'rate'))
+        look.wobbleRate = Math.max(
+          look.wobbleRate,
+          0.15 + 1.1 * norm(node, 'rate')
         )
         break
       case 'phaser':
-        look.drift = Math.max(2, Math.round(10 - 7 * mix * norm(node, 'freq')))
+        look.drift = Math.max(
+          look.drift,
+          mix * (0.6 + 2.4 * norm(node, 'freq'))
+        )
         break
       case 'reverb':
-        look.lightness *= 1 - 0.45 * mix * (0.3 + 0.7 * node.settings.decay)
+        look.lightness *= 1 - 0.55 * mix * (0.3 + 0.7 * node.settings.decay)
         break
       case 'delay':
         look.echoes = Math.max(
@@ -269,8 +287,8 @@ export function voiceLook(state, voice) {
         break
       case 'distortion': {
         const drive = mix * (0.3 + 0.7 * norm(node, 'drive'))
-        look.lightness *= 1 + 0.5 * drive
-        look.jitter = Math.max(look.jitter, drive * 0.25)
+        look.lightness *= 1 + 0.6 * drive
+        look.tremor = Math.max(look.tremor, drive * 1.2)
         break
       }
       case 'pitchShift':
